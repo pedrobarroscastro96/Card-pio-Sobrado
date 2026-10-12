@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#FAF9F5">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="description"
+    content="Cardápio Digital O Sobrado — Hambúrgueres artesanais, porções especiais, chopp gelado e sobremesas. Peça em sua mesa com rapidez e elegância.">
+
+  <!-- Open Graph / WhatsApp Preview -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Cardápio Digital — O Sobrado">
+  <meta property="og:description"
+    content="Conheça nossos burgers artesanais grelhados no fogo, porções e chopp fresco.">
+  <meta property="og:image" content="assets/images/products/burger-sobrado.jpg">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="O Sobrado">
+
+  <title>Cardápio Digital — O Sobrado</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="assets/images/Logo_Sobrado.jpg">
+
+  <!-- Estilos da Aplicação -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+
+<body>
+
+  <div class="app-container" id="menuAppContainer">
+
+    <!-- Header Compacto Sticky -->
+    <header class="menu-header">
+      <div class="header-left">
+        <!-- Voltar ao Hub de Entrada -->
+        <a href="index.html" class="btn-back-hub" id="btnBackHub" aria-label="Voltar ao início">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </a>
+
+        <!-- Marca e Título -->
+        <div class="header-brand">
+          <img src="assets/images/Logo_Sobrado.jpg" alt="Logo Sobrado" class="header-logo-mini" width="34"
+            height="34" />
+          <div class="header-title-box">
+            <span class="header-title">Sobrado</span>
+            <span class="header-desc">Burger & Bar</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <!-- Selo de Mesa Ativa -->
+        <div class="header-table-badge" id="headerTableBadge" style="display: none;">
+          <span class="table-badge-dot" aria-hidden="true"></span>
+          <span id="headerTableText">Mesa --</span>
+        </div>
+
+        <!-- Botão Wi-Fi Rápido no Header -->
+        <button type="button" class="header-wifi-btn btn-trigger-wifi" aria-label="Ver Wi-Fi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+            <line x1="12" y1="20" x2="12.01" y2="20"></line>
+          </svg>
+        </button>
+
+        <!-- Botão da Sacola de Pedidos no Header -->
+        <button type="button" class="header-cart-btn" id="btnOpenCart" aria-label="Abrir sacola de pedidos">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span class="cart-badge" id="cartBadgeCount" style="display: none;">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Barra de Pesquisa Rápida -->
+    <div class="search-container">
+      <div class="search-input-wrapper">
+        <span class="search-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </span>
+        <input type="search" id="menuSearchInput" class="search-input"
+          placeholder="Buscar no cardápio (ex: burger, chopp, bacon...)" autocomplete="off"
+          aria-label="Buscar produtos no cardápio" />
+        <button type="button" class="search-clear-btn" id="searchClearBtn" aria-label="Limpar pesquisa">✕</button>
+      </div>
+    </div>
+
+    <!-- Barra de Categorias Horizontal Sticky com Scroll Suave -->
+    <nav class="categories-bar-wrapper" aria-label="Navegação por categorias de produtos">
+      <div class="categories-bar" id="categoriesBar">
+        <!-- Renderizado dinamicamente via JavaScript -->
+      </div>
+    </nav>
+
+    <!-- Listagem Principal de Seções e Produtos -->
+    <main class="menu-content" id="menuContent">
+      <!-- Seções e cards renderizados dinamicamente via JavaScript -->
+    </main>
+
+    <!-- Estado de Busca Vazia -->
+    <div class="empty-search-state" id="emptySearchState">
+      <span class="empty-icon" aria-hidden="true">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9E9B94" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </span>
+      <h3 class="empty-title">Nenhum item encontrado</h3>
+      <p class="empty-desc">Tente buscar por outro termo ou ingrediente.</p>
+    </div>
+
+    <!-- Modal / Bottom Drawer de Detalhes do Produto (com suporte a Vídeo e Imagem) -->
+    <div class="modal-overlay" id="productModal" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+      <div class="product-drawer">
+
+        <div class="drawer-handle-bar">
+          <div class="drawer-handle"></div>
+        </div>
+
+        <button type="button" class="btn-close-modal" id="btnCloseDrawer" aria-label="Fechar detalhes">✕</button>
+
+        <!-- Mídia em Destaque no Topo do Modal (Vídeo ou Foto) -->
+        <div class="drawer-media-wrap modal-media modal-image-container" id="drawerMediaContainer">
+          <!-- Renderizado dinamicamente: <video> ou <img> -->
+        </div>
+
+        <!-- Conteúdo do Produto -->
+        <div class="drawer-body">
+          <span class="drawer-badge" id="drawerBadge" style="display: none;">Destaque</span>
+
+          <div class="drawer-header-row">
+            <h2 class="drawer-title" id="drawerTitle">Nome do Produto</h2>
+            <div class="drawer-price" id="drawerPrice">R$ 0,00</div>
+          </div>
+
+          <p class="drawer-desc" id="drawerDesc">Descrição completa do item.</p>
+
+          <!-- Molho de Acompanhamento / Destaque Especial -->
+          <div id="drawerAccompanimentContainer" style="display: none;"></div>
+
+          <!-- Ingredientes Artesanais -->
+          <div id="drawerIngredientsBox">
+            <h4 class="drawer-section-title">Ingredientes & Composição</h4>
+            <ul class="ingredients-list" id="drawerIngredientsList">
+              <!-- Renderizado dinamicamente -->
+            </ul>
+          </div>
+
+          <!-- Adicionais do Produto (Exclusivo no Modal de Detalhes) -->
+          <div id="drawerAddonsSection" class="drawer-addons-section" style="display: none;"></div>
+
+          <!-- Ação do Cliente -->
+          <div class="drawer-actions">
+            <button type="button" class="btn-primary-action" id="btnAddToCart">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <path d="M16 10a4 4 0 0 1-8 0"></path>
+              </svg>
+              <span id="btnAddToCartText">Adicionar à Sacola</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Modal / Bottom Drawer da Sacola de Pedidos -->
+    <div class="modal-overlay" id="cartModal" role="dialog" aria-modal="true" aria-labelledby="cartDrawerTitle">
+      <div class="product-drawer cart-drawer">
+
+        <div class="drawer-handle-bar">
+          <div class="drawer-handle"></div>
+        </div>
+
+        <button type="button" class="btn-close-modal" id="btnCloseCart" aria-label="Fechar sacola">✕</button>
+
+        <div class="cart-drawer-header">
+          <div class="cart-title-row">
+            <h2 class="cart-drawer-title" id="cartDrawerTitle">Sua Sacola</h2>
+            <div class="cart-table-badge" id="cartTableBadge" style="display: none;">
+              <span class="table-badge-dot" aria-hidden="true"></span>
+              <span id="cartTableText">Mesa --</span>
+            </div>
+          </div>
+          <p class="cart-drawer-subtitle">Revise seus itens e envie o pedido diretamente para o estabelecimento.</p>
+        </div>
+
+        <!-- Conteúdo da Sacola (Itens ou Estado Vazio) -->
+        <div class="cart-drawer-body" id="cartDrawerBody">
+          <!-- Renderizado dinamicamente via JS -->
+        </div>
+
+        <!-- Rodapé da Sacola (Total, Observações e WhatsApp) -->
+        <div class="cart-drawer-footer" id="cartDrawerFooter">
+          <div class="cart-notes-wrapper">
+            <label for="cartNotesInput" class="cart-notes-label">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              <span>Observações (opcional):</span>
+            </label>
+            <textarea id="cartNotesInput" class="cart-notes-input"
+              placeholder="Ex: Ponto da carne, sem cebola, maionese à parte..." rows="2"></textarea>
+          </div>
+
+          <div class="cart-total-row">
+            <span class="cart-total-label">Total do Pedido</span>
+            <span class="cart-total-value" id="cartTotalValue">R$ 0,00</span>
+          </div>
+
+          <button type="button" class="btn-primary-action btn-whatsapp-order" id="btnWhatsappOrder">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.149.929 3.182 0 5.767-2.587 5.768-5.766 0-3.18-2.586-5.771-5.768-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.073.376-.044.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.203c.043.072.043.419-.101.824z" />
+            </svg>
+            <span>Pedir no WhatsApp</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Modal de Wi-Fi -->
+    <div class="modal-overlay" id="wifiModal" role="dialog" aria-modal="true" aria-labelledby="wifiModalTitle">
+      <div class="wifi-modal-box">
+        <div class="wifi-icon-large" aria-hidden="true">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+            <line x1="12" y1="20" x2="12.01" y2="20"></line>
+          </svg>
+        </div>
+
+        <h2 class="wifi-modal-title" id="wifiModalTitle">Wi-Fi d'O Sobrado</h2>
+        <p class="wifi-modal-desc">Conecte-se gratuitamente à nossa rede exclusiva para clientes.</p>
+
+        <div class="wifi-info-card">
+          <div class="wifi-row">
+            <span class="wifi-row-label">Nome da Rede (SSID)</span>
+            <span class="wifi-row-value">O Sobrado - Clientes</span>
+          </div>
+          <div class="wifi-row">
+            <span class="wifi-row-label">Senha de Acesso</span>
+            <span class="wifi-row-value">sobradoburger</span>
+          </div>
+        </div>
+
+        <button type="button" class="btn-copy-wifi" id="btnCopyWifiPassword">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span>Copiar Senha</span>
+        </button>
+
+        <button type="button" class="btn-close-wifi-text" id="btnCloseWifi">
+          Fechar Janela
+        </button>
+      </div>
+    </div>
+
+    <!-- Toast de Notificação -->
+    <div class="toast-notice" id="toastNotice" role="status" aria-live="polite"></div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="assets/js/products.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+
+</html>

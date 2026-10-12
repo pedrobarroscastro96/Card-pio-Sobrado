@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#FAF9F5">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="description" content="O Sobrado — Hamburgueria artesanal & Chopp em ambiente histórico. Acesse o cardápio digital, conecte-se ao Wi-Fi e conheça nossas criações gastronômicas.">
+  
+  <!-- Open Graph / WhatsApp Preview -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Sobrado - Burger & Bar">
+  <meta property="og:description" content="Cardápio digital artesanal, hambúrgueres Angus, porções e bebidas. Conecte-se e faça seu pedido.">
+  <meta property="og:image" content="assets/images/Logo_Sobrado.jpg">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="Sobrado">
+
+  <title>Sobrado - Burger & Bar — Hub de Mesa</title>
+
+  <!-- Favicon com logo oficial -->
+  <link rel="icon" type="image/jpeg" href="assets/images/Logo_Sobrado.jpg">
+
+  <!-- Estilos da Aplicação -->
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+  <div class="app-container" id="hubAppContainer">
+    <main class="hub-wrapper">
+
+      <!-- Identidade e Boas-Vindas Centralizada (Topo Limpo & Minimalista) -->
+      <section class="hub-identity">
+        <div class="hub-logo-box">
+          <img 
+            src="assets/images/Logo_Sobrado.jpg" 
+            alt="Logotipo Sobrado - Burger & Bar" 
+            class="hub-logo-img"
+            width="108"
+            height="108"
+            loading="eager"
+          />
+        </div>
+
+        <h1 class="hub-title">Sobrado</h1>
+        <p class="hub-subtitle">Burger & Bar • @osobradoo</p>
+
+        <!-- Selo de Mesa Ativa Detectada via URL NFC (?mesa=XX) -->
+        <div class="table-badge" id="hubTableBadge" style="display: none;">
+          <span class="table-badge-dot" aria-hidden="true"></span>
+          <span>Mesa <strong id="hubTableNumber">--</strong> Conectada</span>
+        </div>
+      </section>
+
+      <!-- Ações do Hub de Mesa -->
+      <nav class="hub-actions" aria-label="Menu principal de acesso">
+        
+        <!-- Opção 1: Ver Cardápio (Ação Principal) -->
+        <a href="cardapio.html" class="hub-btn hub-btn-primary" id="hubMenuLink">
+          <div class="hub-btn-left">
+            <span class="hub-btn-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                <line x1="9" y1="7" x2="15" y2="7"></line>
+                <line x1="9" y1="11" x2="13" y2="11"></line>
+              </svg>
+            </span>
+            <div class="hub-btn-text">
+              <span class="hub-btn-title">Ver Cardápio Digital</span>
+              <span class="hub-btn-desc">Hambúrgueres Angus, porções, bebidas e mais</span>
+            </div>
+          </div>
+          <span class="hub-btn-arrow" aria-hidden="true">➔</span>
+        </a>
+
+        <!-- Opção 2: Nosso Instagram -->
+        <a 
+          href="https://www.instagram.com/osobradoo" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          class="hub-btn hub-btn-instagram"
+          id="hubInstagramLink">
+          <div class="hub-btn-left">
+            <span class="hub-btn-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+              </svg>
+            </span>
+            <div class="hub-btn-text">
+              <span class="hub-btn-title">Nosso Instagram</span>
+              <span class="hub-btn-desc">Marque @osobradoo nos stories</span>
+            </div>
+          </div>
+          <span class="hub-btn-arrow" aria-hidden="true">➔</span>
+        </a>
+
+        <!-- Opção 3: Wi-Fi da Casa -->
+        <button type="button" class="hub-btn hub-btn-wifi btn-trigger-wifi" id="hubWifiBtn">
+          <div class="hub-btn-left">
+            <span class="hub-btn-icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                <line x1="12" y1="20" x2="12.01" y2="20"></line>
+              </svg>
+            </span>
+            <div class="hub-btn-text">
+              <span class="hub-btn-title">Wi-Fi da Casa</span>
+              <span class="hub-btn-desc">Nome da rede e senha rápida</span>
+            </div>
+          </div>
+          <span class="hub-btn-arrow" aria-hidden="true">➔</span>
+        </button>
+
+      </nav>
+
+      <!-- Rodapé Institucional Oficial -->
+      <footer class="hub-footer">
+        <p class="hub-footer-text">
+          <strong>Sobrado - Burger & Bar</strong><br>
+          Rua Antônio Augusto da Silveira 159B (Andar superior)<br>
+          Vila Nova • Perdões-MG • Tel: (35) 99170-077
+        </p>
+        <span class="hub-footer-badge">Placa NFC de Mesa Oficial</span>
+      </footer>
+
+    </main>
+
+    <!-- Modal de Wi-Fi -->
+    <div class="modal-overlay" id="wifiModal" role="dialog" aria-modal="true" aria-labelledby="wifiModalTitle">
+      <div class="wifi-modal-box">
+        <div class="wifi-icon-large" aria-hidden="true">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+            <line x1="12" y1="20" x2="12.01" y2="20"></line>
+          </svg>
+        </div>
+
+        <h2 class="wifi-modal-title" id="wifiModalTitle">Wi-Fi d'O Sobrado</h2>
+        <p class="wifi-modal-desc">Conecte-se gratuitamente à nossa rede exclusiva para clientes.</p>
+
+        <div class="wifi-info-card">
+          <div class="wifi-row">
+            <span class="wifi-row-label">Nome da Rede (SSID)</span>
+            <span class="wifi-row-value">O Sobrado - Clientes</span>
+          </div>
+          <div class="wifi-row">
+            <span class="wifi-row-label">Senha de Acesso</span>
+            <span class="wifi-row-value">sobradoburger</span>
+          </div>
+        </div>
+
+        <button type="button" class="btn-copy-wifi" id="btnCopyWifiPassword">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span>Copiar Senha</span>
+        </button>
+
+        <button type="button" class="btn-close-wifi-text" id="btnCloseWifi">
+          Fechar Janela
+        </button>
+      </div>
+    </div>
+
+    <!-- Toast de Notificação -->
+    <div class="toast-notice" id="toastNotice" role="status" aria-live="polite"></div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="assets/js/products.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
