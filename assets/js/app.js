@@ -106,12 +106,43 @@ function initMenu(table) {
     }
   }
 
+  // Inicializa o Gerenciador Administrativo antes de renderizar categorias e produtos
+  if (typeof AdminManager !== 'undefined') {
+    AdminManager.init();
+  }
+
   renderCategories();
   renderProducts();
   setupSearchFilter();
   setupScrollSpy();
   setupProductDrawer();
   initCart();
+
+  // Sincronização inicial com o Supabase (com fallback resiliente)
+  loadProductsFromSupabase();
+}
+
+/**
+ * Busca produtos do Supabase e substitui como fonte primária quando disponível
+ */
+async function loadProductsFromSupabase() {
+  if (typeof SupabaseService === 'undefined') return;
+
+  try {
+    const supabaseProducts = await SupabaseService.fetchProducts();
+    if (Array.isArray(supabaseProducts) && supabaseProducts.length > 0) {
+      window.menuData.products = supabaseProducts;
+      try {
+        localStorage.setItem('sobrado_custom_products', JSON.stringify(supabaseProducts));
+      } catch (e) {}
+      renderProducts();
+      console.log(`[Supabase] ${supabaseProducts.length} produtos carregados do banco.`);
+    } else {
+      console.log('[Supabase] Banco vazio ou sem itens. Mantendo cardápio local como fallback.');
+    }
+  } catch (err) {
+    console.warn('[Supabase] Falha ao conectar ao banco. Mantendo dados locais como fallback:', err);
+  }
 }
 
 /**
@@ -307,12 +338,14 @@ function renderProducts() {
   if (!menuContent || !window.menuData) return;
 
   const { categories, products } = window.menuData;
+  const isAdm = typeof AdminManager !== 'undefined' && AdminManager.isAdmin();
   const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
 
   let html = '';
 
   sortedCategories.forEach(category => {
-    const categoryProducts = products.filter(p => p.categoryId === category.id && p.available !== false);
+    // No modo ADM exibe todos os itens (inclusive pausados) para permitir edição e reativação
+    const categoryProducts = products.filter(p => p.categoryId === category.id && (isAdm || p.available !== false));
 
     if (categoryProducts.length === 0) return;
 
@@ -327,7 +360,7 @@ function renderProducts() {
         </div>
 
         <div class="products-grid">
-          ${categoryProducts.map(product => createProductCardHTML(product)).join('')}
+          ${categoryProducts.map(product => createProductCardHTML(product, isAdm)).join('')}
         </div>
       </section>
     `;
@@ -335,29 +368,89 @@ function renderProducts() {
 
   menuContent.innerHTML = html;
 
-  // Delegação de evento de clique para abrir detalhes
-  menuContent.addEventListener('click', (e) => {
-    const card = e.target.closest('.product-card');
-    if (!card) return;
+  // Delegação de evento de clique para abrir detalhes (anexada uma única vez)
+  if (!menuContent.dataset.listenerAttached) {
+    menuContent.dataset.listenerAttached = 'true';
+    menuContent.addEventListener('click', (e) => {
+      // Se clicou em algum controle do modo ADM, não abre drawer do cliente
+      if (e.target.closest('.product-card-admin-actions')) return;
 
-    const productId = card.dataset.productId;
-    openProductDetails(productId);
-  });
+      const card = e.target.closest('.product-card');
+      if (!card) return;
+
+      const productId = card.dataset.productId;
+      openProductDetails(productId);
+    });
+  }
 }
 
 /**
  * Gera o HTML individual do card de produto
  */
-function createProductCardHTML(product) {
-  const badgeHTML = product.badge
-    ? `<span class="product-badge">${product.badge}</span>`
-    : '';
+function createProductCardHTML(product, isAdm = false) {
+  const isPaused = product.available === false;
+
+  let badgeHTML = '';
+  if (isPaused) {
+    badgeHTML = `<span class="product-badge badge-paused">Pausado</span>`;
+  } else if (product.badge) {
+    badgeHTML = `<span class="product-badge">${product.badge}</span>`;
+  } else if (product.featured) {
+    badgeHTML = `<span class="product-badge">Mais Pedido</span>`;
+  }
 
   const fallbackHTML = getCategoryFallbackSVG(product.categoryId, false);
 
+  const adminActionsHTML = isAdm ? `
+    <div class="product-card-admin-actions" onclick="event.stopPropagation();">
+      <button 
+        type="button" 
+        class="btn-card-adm btn-card-adm-edit" 
+        onclick="event.stopPropagation(); window.AdminManager.openEditModal('${product.id}')" 
+        title="Editar dados deste produto"
+        aria-label="Editar ${product.name}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+        <span>Editar</span>
+      </button>
+
+      <button 
+        type="button" 
+        class="btn-card-adm btn-card-adm-pause ${isPaused ? 'is-paused' : ''}" 
+        onclick="event.stopPropagation(); window.AdminManager.toggleAvailability('${product.id}')" 
+        title="${isPaused ? 'Reativar item no cardápio' : 'Pausar venda deste produto'}"
+        aria-label="${isPaused ? 'Reativar' : 'Pausar'} ${product.name}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          ${isPaused ? `
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          ` : `
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          `}
+        </svg>
+        <span>${isPaused ? 'Reativar' : 'Pausar'}</span>
+      </button>
+
+      <button 
+        type="button" 
+        class="btn-card-adm btn-card-adm-delete" 
+        onclick="event.stopPropagation(); window.AdminManager.confirmDelete('${product.id}')" 
+        title="Excluir este produto"
+        aria-label="Excluir ${product.name}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+        <span>Excluir</span>
+      </button>
+    </div>
+  ` : '';
+
   return `
     <article 
-      class="product-card" 
+      class="product-card ${isPaused ? 'product-card-paused' : ''}" 
       data-product-id="${product.id}"
       tabindex="0"
       role="button"
@@ -385,11 +478,11 @@ function createProductCardHTML(product) {
 
       <div class="product-card-info">
         <h3 class="product-card-name">${product.name}</h3>
-        <p class="product-card-desc">${product.description}</p>
+        <p class="product-card-desc">${product.description || ''}</p>
         
         <div class="product-card-footer">
           <div class="product-price">
-            <span class="product-price-currency">R$</span>${formatCurrency(product.price)}
+            <span class="product-price-currency">R$</span>${formatCurrency(product.price || 0)}
           </div>
           <span class="btn-open-detail" aria-hidden="true">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -398,6 +491,8 @@ function createProductCardHTML(product) {
             </svg>
           </span>
         </div>
+
+        ${adminActionsHTML}
       </div>
     </article>
   `;
@@ -544,7 +639,7 @@ function setupProductDrawer() {
     btnAddToCart.addEventListener('click', () => {
       if (!currentModalProductId) return;
       const product = window.menuData?.products.find(p => p.id === currentModalProductId);
-      if (!product) return;
+      if (!product || product.available === false) return;
 
       addToCart(product, currentSelectedAddons);
 
@@ -606,7 +701,19 @@ function openProductDetails(productId) {
 
   // Reseta estado do botão de adicionar e exibe o total inicial com preço base
   const btnAddToCart = document.getElementById('btnAddToCart');
-  if (btnAddToCart) btnAddToCart.style.backgroundColor = '';
+  const btnAddToCartText = document.getElementById('btnAddToCartText');
+  if (btnAddToCart) {
+    btnAddToCart.style.backgroundColor = '';
+    if (product.available === false) {
+      btnAddToCart.disabled = true;
+      btnAddToCart.style.opacity = '0.55';
+      btnAddToCart.style.cursor = 'not-allowed';
+    } else {
+      btnAddToCart.disabled = false;
+      btnAddToCart.style.opacity = '';
+      btnAddToCart.style.cursor = '';
+    }
+  }
   updateModalButtonTotal(product);
 
   const modalOverlay = document.getElementById('productModal');
@@ -731,20 +838,118 @@ function openProductDetails(productId) {
 }
 
 /**
+ * Converte a lista de adicionais permitidos do produto (seja ID simples, JSON serializado ou objeto)
+ * para uma lista padronizada [{ id, name, price }] considerando preços customizados
+ */
+function parseProductAddons(allowedAddons, product = null) {
+  // 1. Prioriza addonsConfig vindo diretamente do Supabase / Admin
+  if (product && Array.isArray(product.addonsConfig) && product.addonsConfig.length > 0) {
+    const catalog = window.addonItems || window.menuData?.addonItems || {};
+    return product.addonsConfig.map(item => {
+      const base = catalog[item.id];
+      const displayName = (base && (!item.name || item.name === item.id)) ? base.name : (item.name || (base ? base.name : item.id));
+      const rawPrice = typeof item.price === 'number' ? item.price : parseFloat(item.price || 0);
+      const finalPrice = (rawPrice > 0 || !base) ? rawPrice : Number(base.price);
+      return {
+        id: String(item.id),
+        name: displayName,
+        price: finalPrice
+      };
+    });
+  }
+
+  // 2. Se allowedAddons já for um array de objetos estruturados [{ id, name, price }]
+  if (Array.isArray(allowedAddons) && allowedAddons.length > 0 && typeof allowedAddons[0] === 'object' && allowedAddons[0] !== null && ('name' in allowedAddons[0] || 'price' in allowedAddons[0])) {
+    const catalog = window.addonItems || window.menuData?.addonItems || {};
+    return allowedAddons.map(item => {
+      const base = catalog[item.id];
+      const displayName = (base && (!item.name || item.name === item.id)) ? base.name : (item.name || (base ? base.name : item.id));
+      const rawPrice = typeof item.price === 'number' ? item.price : parseFloat(item.price || 0);
+      const finalPrice = (rawPrice > 0 || !base) ? rawPrice : Number(base.price);
+      return {
+        id: String(item.id),
+        name: displayName,
+        price: finalPrice
+      };
+    });
+  }
+
+  if (!allowedAddons || !Array.isArray(allowedAddons) || allowedAddons.length === 0) {
+    return [];
+  }
+
+  const catalog = window.addonItems || window.menuData?.addonItems || {};
+  const customPrices = product?.customAddonPrices || {};
+
+  return allowedAddons.map(item => {
+    // 1. Já é objeto
+    if (typeof item === 'object' && item !== null) {
+      const price = customPrices[item.id] != null 
+        ? Number(customPrices[item.id]) 
+        : (typeof item.price === 'number' ? item.price : parseFloat(item.price || 0));
+      return {
+        id: item.id,
+        name: item.name || catalog[item.id]?.name || item.id,
+        price: price
+      };
+    }
+
+    // 2. É string (JSON serializado ou ID simples)
+    if (typeof item === 'string') {
+      const trimmed = item.trim();
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (parsed && parsed.id) {
+            const price = customPrices[parsed.id] != null 
+              ? Number(customPrices[parsed.id]) 
+              : (typeof parsed.price === 'number' ? parsed.price : parseFloat(parsed.price || 0));
+            return {
+              id: parsed.id,
+              name: parsed.name || catalog[parsed.id]?.name || parsed.id,
+              price: price
+            };
+          }
+        } catch (e) {
+          // segue fallback
+        }
+      }
+
+      // ID simples
+      const base = catalog[trimmed];
+      const customPrice = customPrices[trimmed];
+      if (base) {
+        return {
+          id: base.id,
+          name: base.name,
+          price: customPrice != null ? Number(customPrice) : base.price
+        };
+      }
+
+      return {
+        id: trimmed,
+        name: trimmed,
+        price: customPrice != null ? Number(customPrice) : 0
+      };
+    }
+
+    return null;
+  }).filter(Boolean);
+}
+
+/**
  * Atualiza o cálculo de adicionais selecionados e reflete no botão
  */
 function onAddonCheckboxChange() {
   const product = window.menuData?.products.find(p => p.id === currentModalProductId);
   if (!product) return;
 
-  const catalog = window.addonItems || window.menuData?.addonItems || {};
   const checkboxes = document.querySelectorAll('#drawerAddonsSection .addon-checkbox:checked');
 
   currentSelectedAddons = Array.from(checkboxes).map(cb => {
-    const addonId = cb.value;
-    return catalog[addonId] || {
-      id: addonId,
-      name: cb.dataset.name,
+    return {
+      id: cb.dataset.id || cb.value,
+      name: cb.dataset.name || cb.value,
       price: parseFloat(cb.dataset.price) || 0
     };
   });
@@ -769,6 +974,11 @@ function updateModalButtonTotal(product) {
   const btnAddToCartText = document.getElementById('btnAddToCartText');
   if (!btnAddToCartText || !product) return;
 
+  if (product.available === false) {
+    btnAddToCartText.textContent = 'Item Indisponível no Momento';
+    return;
+  }
+
   const addonsSum = currentSelectedAddons.reduce((sum, a) => sum + (a.price || 0), 0);
   const total = product.price + addonsSum;
 
@@ -783,15 +993,21 @@ function renderDrawerAddons(product) {
   if (!addonsSection) return;
 
   const catalog = window.addonItems || window.menuData?.addonItems || {};
-  const allowed = product.allowedAddons;
 
-  if (!allowed || !Array.isArray(allowed) || allowed.length === 0) {
-    addonsSection.style.display = 'none';
-    addonsSection.innerHTML = '';
-    return;
-  }
-
-  const items = allowed.map(id => catalog[id]).filter(Boolean);
+  // Renderiza os adicionais e preços usando os dados de addonsConfig salvos no banco para aquele item
+  const items = (Array.isArray(product.addonsConfig) && product.addonsConfig.length > 0)
+    ? product.addonsConfig.map(addon => {
+        const base = catalog[addon.id];
+        const displayName = (base && (!addon.name || addon.name === addon.id)) ? base.name : (addon.name || (base ? base.name : addon.id));
+        const rawPrice = typeof addon.price === 'number' ? addon.price : parseFloat(addon.price || 0);
+        const finalPrice = (rawPrice > 0 || !base) ? rawPrice : Number(base.price);
+        return {
+          id: String(addon.id),
+          name: displayName,
+          price: finalPrice
+        };
+      })
+    : parseProductAddons(product.allowedAddons, product);
 
   if (items.length === 0) {
     addonsSection.style.display = 'none';
@@ -928,6 +1144,18 @@ function showToast(message) {
   toastTimeout = setTimeout(() => {
     toast.classList.remove('show');
   }, 3200);
+}
+
+/**
+ * Utilitários globais do sistema
+ */
+const Utils = {
+  showToast(message) {
+    showToast(message);
+  }
+};
+if (typeof window !== 'undefined') {
+  window.Utils = Utils;
 }
 
 /**
@@ -1222,10 +1450,998 @@ function setupCartDrawer() {
   }
 }
 
-// Expõe funções necessárias
+/**
+ * =====================================================================
+ * 9. MÓDULO ADMINISTRADOR (ADM) — FASE 1 (MOCK LOCAL & REATIVO)
+ * =====================================================================
+ */
+const AdminManager = {
+  SESSION_STORAGE_KEY: 'sobrado_admin_auth',
+  LOCAL_STORAGE_PRODUCTS_KEY: 'sobrado_custom_products',
+  productIdToDelete: null,
+
+  init() {
+    this.loadStoredProducts();
+    this.checkSession();
+    this.populateCategorySelect();
+    this.setupListeners();
+  },
+
+  isAdmin() {
+    return sessionStorage.getItem(this.SESSION_STORAGE_KEY) === 'true';
+  },
+
+  checkSession() {
+    this.applyAdminUI(this.isAdmin());
+  },
+
+  applyAdminUI(isAuthed) {
+    const topBar = document.getElementById('adminTopBar');
+    const headerAdminBtn = document.getElementById('btnOpenAdminAuth');
+
+    if (isAuthed) {
+      document.body.classList.add('admin-mode-active');
+      const container = document.getElementById('menuAppContainer');
+      if (container) container.classList.add('admin-mode-active');
+      if (topBar) topBar.style.display = 'block';
+      if (headerAdminBtn) headerAdminBtn.classList.add('active');
+    } else {
+      document.body.classList.remove('admin-mode-active');
+      const container = document.getElementById('menuAppContainer');
+      if (container) container.classList.remove('admin-mode-active');
+      if (topBar) topBar.style.display = 'none';
+      if (headerAdminBtn) headerAdminBtn.classList.remove('active');
+    }
+  },
+
+  loadStoredProducts() {
+    try {
+      const stored = localStorage.getItem(this.LOCAL_STORAGE_PRODUCTS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          window.menuData.products = parsed;
+        }
+      }
+    } catch (err) {
+      console.warn('Erro ao carregar produtos salvos do localStorage:', err);
+    }
+  },
+
+  persistProducts() {
+    try {
+      localStorage.setItem(this.LOCAL_STORAGE_PRODUCTS_KEY, JSON.stringify(window.menuData.products));
+    } catch (err) {
+      console.error('Erro ao persistir produtos no localStorage:', err);
+    }
+  },
+
+  async login(password) {
+    const errorEl = document.getElementById('adminAuthError');
+    const pwdInput = document.getElementById('adminAuthPassword');
+    const submitBtn = document.getElementById('btnSubmitAdminAuth');
+    const originalBtnText = submitBtn ? submitBtn.textContent : 'Entrar no Painel';
+
+    const enteredPassword = password ? password.trim() : (pwdInput ? pwdInput.value.trim() : '');
+
+    if (!enteredPassword) {
+      if (errorEl) {
+        errorEl.textContent = 'Por favor, digite a senha.';
+        errorEl.style.display = 'block';
+      }
+      if (pwdInput) pwdInput.focus();
+      return false;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Verificando...';
+    }
+
+    if (errorEl) {
+      errorEl.textContent = '';
+      errorEl.style.display = 'none';
+    }
+
+    try {
+      if (typeof SupabaseService === 'undefined' || typeof SupabaseService.verifyAdminPassword !== 'function') {
+        throw new Error('Falha ao validar credenciais no servidor.');
+      }
+
+      const isValid = await SupabaseService.verifyAdminPassword(enteredPassword);
+
+      if (isValid === true) {
+        sessionStorage.setItem(this.SESSION_STORAGE_KEY, 'true');
+        this.applyAdminUI(true);
+        renderProducts();
+        this.closeAuthModal();
+
+        if (errorEl) {
+          errorEl.textContent = '';
+          errorEl.style.display = 'none';
+        }
+
+        if (pwdInput) pwdInput.value = '';
+
+        if (window.showToast) {
+          window.showToast('⚡ Bem-vindo ao Modo Administrador!');
+        }
+        return true;
+      } else {
+        if (errorEl) {
+          errorEl.textContent = 'Senha incorreta.';
+          errorEl.style.display = 'block';
+        }
+        if (pwdInput) {
+          pwdInput.focus();
+          pwdInput.style.borderColor = '#DC2626';
+          setTimeout(() => {
+            pwdInput.style.borderColor = '';
+          }, 1500);
+        }
+        return false;
+      }
+    } catch (err) {
+      console.error('[Admin] Erro ao validar credenciais:', err);
+      if (errorEl) {
+        errorEl.textContent = err.message || 'Falha ao validar credenciais no servidor.';
+        errorEl.style.display = 'block';
+      }
+      return false;
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalBtnText;
+      }
+    }
+  },
+
+  logout() {
+    sessionStorage.removeItem(this.SESSION_STORAGE_KEY);
+    this.applyAdminUI(false);
+    renderProducts();
+    if (window.showToast) {
+      window.showToast('Sessão administrativa encerrada.');
+    }
+  },
+
+  populateCategorySelect() {
+    const select = document.getElementById('adminProdCategory');
+    if (!select || !window.menuData || !window.menuData.categories) return;
+
+    const categories = [...window.menuData.categories].sort((a, b) => a.order - b.order);
+    select.innerHTML = categories.map(cat => `
+      <option value="${cat.id}">${cat.name}</option>
+    `).join('');
+  },
+
+  openAuthModal() {
+    const modal = document.getElementById('adminAuthModal');
+    if (!modal) return;
+
+    if (this.isAdmin()) {
+      if (window.showToast) {
+        window.showToast('⚡ O Painel Administrativo já está ativo.');
+      }
+      return;
+    }
+
+    const pwdInput = document.getElementById('adminAuthPassword');
+    const errorEl = document.getElementById('adminAuthError');
+    if (pwdInput) pwdInput.value = '';
+    if (errorEl) {
+      errorEl.textContent = '';
+      errorEl.style.display = 'none';
+    }
+
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => {
+      if (pwdInput) pwdInput.focus();
+    }, 150);
+  },
+
+  closeAuthModal() {
+    const modal = document.getElementById('adminAuthModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  },
+
+  currentEditingAddons: [],
+
+  initAddonsConfig(productOrNull) {
+    const catalog = window.addonItems || window.menuData?.addonItems || {};
+    const baseCatalogList = Object.values(catalog);
+
+    if (productOrNull) {
+      // Carrega os adicionais e preços vindos de addonsConfig do Supabase (com fallback)
+      let productAddons = [];
+      if (Array.isArray(productOrNull.addonsConfig) && productOrNull.addonsConfig.length > 0) {
+        productAddons = productOrNull.addonsConfig.map(a => {
+          const base = catalog[a.id];
+          const displayName = (base && (!a.name || a.name === a.id)) ? base.name : (a.name || (base ? base.name : a.id));
+          const rawPrice = typeof a.price === 'number' ? a.price : parseFloat(a.price || 0);
+          const finalPrice = (rawPrice > 0 || !base) ? rawPrice : Number(base.price);
+          return {
+            id: String(a.id),
+            name: displayName,
+            price: finalPrice
+          };
+        });
+      } else {
+        productAddons = parseProductAddons(productOrNull.allowedAddons, productOrNull);
+      }
+
+      const selectedMap = new Map();
+      productAddons.forEach(a => selectedMap.set(a.id, a));
+
+      // 1. Adicionais do catálogo base:
+      // - Usa SEMPRE o nome formatado oficial (base.name), e nunca o id técnico cru
+      // - Se o item não tiver preço customizado prévio (> 0), puxa o valor base de addonItems
+      const list = baseCatalogList.map(base => {
+        const sel = selectedMap.get(base.id);
+        const selPrice = sel ? Number(sel.price) : 0;
+        const finalPrice = (sel && selPrice > 0) ? selPrice : Number(base.price);
+
+        return {
+          id: base.id,
+          name: base.name, // Nome sempre formatado (ex: "Hambúrguer 110g")
+          price: finalPrice, // Preço customizado ou base de addonItems (nunca R$ 0,00)
+          selected: !!sel,
+          isCustom: false
+        };
+      });
+
+      // 2. Adicionais customizados do produto (não presentes no catálogo base)
+      productAddons.forEach(sel => {
+        if (!catalog[sel.id]) {
+          list.push({
+            id: sel.id,
+            name: sel.name || sel.id,
+            price: Math.max(0, parseFloat(sel.price) || 0),
+            selected: true,
+            isCustom: true
+          });
+        }
+      });
+
+      this.currentEditingAddons = list;
+    } else {
+      // Novo produto: todos os adicionais base habilitados por padrão com nome e preço oficiais
+      this.currentEditingAddons = baseCatalogList.map(base => ({
+        id: base.id,
+        name: base.name,
+        price: Number(base.price),
+        selected: true,
+        isCustom: false
+      }));
+    }
+
+    this.renderAddonsConfig();
+  },
+
+  renderAddonsConfig() {
+    const listEl = document.getElementById('adminAddonsList');
+    if (!listEl) return;
+
+    if (!this.currentEditingAddons || this.currentEditingAddons.length === 0) {
+      listEl.innerHTML = '<div style="padding: 10px; font-size: 0.78rem; color: var(--text-dim); text-align: center;">Nenhum adicional disponível.</div>';
+      return;
+    }
+
+    const catalog = window.addonItems || window.menuData?.addonItems || {};
+
+    listEl.innerHTML = this.currentEditingAddons.map(addon => {
+      const base = catalog[addon.id];
+      // Garante nome formatado oficial e preço base se zerado
+      const displayName = (base && (!addon.name || addon.name === addon.id)) ? base.name : (addon.name || (base ? base.name : addon.id));
+      const rawPrice = addon.price != null ? Number(addon.price) : 0;
+      const displayPrice = (rawPrice > 0 || !base) ? rawPrice : Number(base.price);
+
+      return `
+      <div class="admin-addon-item-row ${addon.selected ? 'is-active' : 'is-inactive'}" data-id="${addon.id}">
+        <label class="admin-addon-item-label" for="admin-addon-check-${addon.id}">
+          <input 
+            type="checkbox" 
+            id="admin-addon-check-${addon.id}" 
+            class="admin-addon-checkbox" 
+            data-id="${addon.id}" 
+            ${addon.selected ? 'checked' : ''}
+          />
+          <span class="admin-addon-custom-check" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </span>
+          <span class="admin-addon-item-name" title="${displayName}">${displayName}</span>
+        </label>
+        <div class="admin-addon-item-price-wrap">
+          <span class="admin-addon-price-prefix">R$</span>
+          <input 
+            type="number" 
+            class="admin-addon-price-input" 
+            data-id="${addon.id}" 
+            value="${displayPrice.toFixed(2)}" 
+            step="0.50" 
+            min="0" 
+          />
+          ${addon.isCustom ? `
+            <button type="button" class="btn-remove-custom-addon" data-id="${addon.id}" title="Remover adicional">✕</button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+    }).join('');
+  },
+
+  openNewModal() {
+    const form = document.getElementById('adminProductForm');
+    if (form) form.reset();
+
+    const idInput = document.getElementById('adminProdId');
+    if (idInput) idInput.value = '';
+
+    const titleEl = document.getElementById('adminProductModalTitle');
+    const subtitleEl = document.getElementById('adminProductModalSubtitle');
+    if (titleEl) titleEl.textContent = 'Novo Produto';
+    if (subtitleEl) subtitleEl.textContent = 'Preencha as informações do produto para o cardápio.';
+
+    const categorySelect = document.getElementById('adminProdCategory');
+    if (categorySelect && window.menuData?.categories?.length > 0) {
+      categorySelect.value = window.menuData.categories[0].id;
+    }
+
+    const availableCheckbox = document.getElementById('adminProdAvailable');
+    if (availableCheckbox) availableCheckbox.checked = true;
+
+    const hasAddonsCheckbox = document.getElementById('adminProdHasAddons');
+    if (hasAddonsCheckbox) hasAddonsCheckbox.checked = true;
+
+    const addonsConfigSection = document.getElementById('adminAddonsConfigSection');
+    if (addonsConfigSection) addonsConfigSection.style.display = 'flex';
+    this.initAddonsConfig(null);
+
+    const featuredCheckbox = document.getElementById('adminProdFeatured');
+    if (featuredCheckbox) featuredCheckbox.checked = false;
+
+    const modal = document.getElementById('adminProductFormModal');
+    if (modal) {
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      const nameInput = document.getElementById('adminProdName');
+      setTimeout(() => {
+        if (nameInput) nameInput.focus();
+      }, 150);
+    }
+  },
+
+  openEditModal(productId) {
+    const product = window.menuData?.products.find(p => p.id === productId);
+    if (!product) return;
+
+    const idInput = document.getElementById('adminProdId');
+    const nameInput = document.getElementById('adminProdName');
+    const catSelect = document.getElementById('adminProdCategory');
+    const priceInput = document.getElementById('adminProdPrice');
+    const descInput = document.getElementById('adminProdDesc');
+    const ingInput = document.getElementById('adminProdIngredients');
+    const imgInput = document.getElementById('adminProdImage');
+    const hasAddonsCheckbox = document.getElementById('adminProdHasAddons');
+    const featuredCheckbox = document.getElementById('adminProdFeatured');
+    const availableCheckbox = document.getElementById('adminProdAvailable');
+
+    if (idInput) idInput.value = product.id;
+    if (nameInput) nameInput.value = product.name || '';
+    if (catSelect) catSelect.value = product.categoryId || '';
+    if (priceInput) priceInput.value = product.price != null ? Number(product.price).toFixed(2) : '';
+    if (descInput) descInput.value = product.description || '';
+    if (ingInput) {
+      ingInput.value = Array.isArray(product.ingredients)
+        ? product.ingredients.join(', ')
+        : (product.ingredients || '');
+    }
+    if (imgInput) imgInput.value = product.imageUrl || '';
+
+    const hasAddons = (Array.isArray(product.addonsConfig) && product.addonsConfig.length > 0)
+      || (Array.isArray(product.allowedAddons) && product.allowedAddons.length > 0);
+    if (hasAddonsCheckbox) {
+      hasAddonsCheckbox.checked = hasAddons;
+    }
+
+    const addonsConfigSection = document.getElementById('adminAddonsConfigSection');
+    if (addonsConfigSection) {
+      addonsConfigSection.style.display = hasAddons ? 'flex' : 'none';
+    }
+    this.initAddonsConfig(hasAddons ? product : null);
+
+    if (featuredCheckbox) featuredCheckbox.checked = !!product.featured;
+    if (availableCheckbox) availableCheckbox.checked = product.available !== false;
+
+    const titleEl = document.getElementById('adminProductModalTitle');
+    const subtitleEl = document.getElementById('adminProductModalSubtitle');
+    if (titleEl) titleEl.textContent = 'Editar Produto';
+    if (subtitleEl) subtitleEl.textContent = `Editando dados de "${product.name}"`;
+
+    const modal = document.getElementById('adminProductFormModal');
+    if (modal) {
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => {
+        if (nameInput) nameInput.focus();
+      }, 150);
+    }
+  },
+
+  closeProductFormModal() {
+    const modal = document.getElementById('adminProductFormModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  },
+
+  async saveProductFromForm() {
+    const idInput = document.getElementById('adminProdId');
+    const nameInput = document.getElementById('adminProdName');
+    const catSelect = document.getElementById('adminProdCategory');
+    const priceInput = document.getElementById('adminProdPrice');
+    const descInput = document.getElementById('adminProdDesc');
+    const ingInput = document.getElementById('adminProdIngredients');
+    const imgInput = document.getElementById('adminProdImage');
+    const hasAddonsCheckbox = document.getElementById('adminProdHasAddons');
+    const featuredCheckbox = document.getElementById('adminProdFeatured');
+    const availableCheckbox = document.getElementById('adminProdAvailable');
+
+    const name = nameInput?.value.trim();
+    const categoryId = catSelect?.value;
+    const priceRaw = priceInput?.value;
+    const price = parseFloat(priceRaw);
+
+    if (!name) {
+      if (window.showToast) window.showToast('Por favor, informe o nome do produto.');
+      nameInput?.focus();
+      return;
+    }
+
+    if (!categoryId) {
+      if (window.showToast) window.showToast('Selecione uma categoria.');
+      catSelect?.focus();
+      return;
+    }
+
+    if (isNaN(price) || price < 0) {
+      if (window.showToast) window.showToast('Informe um preço válido.');
+      priceInput?.focus();
+      return;
+    }
+
+    const description = descInput?.value.trim() || '';
+    const ingredientsRaw = ingInput?.value.trim() || '';
+    const ingredients = ingredientsRaw
+      ? ingredientsRaw.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    const imageUrl = imgInput?.value.trim() || null;
+    const featured = !!featuredCheckbox?.checked;
+    const available = !!availableCheckbox?.checked;
+    const hasAddons = !!hasAddonsCheckbox?.checked;
+
+    const existingId = idInput?.value.trim();
+    let addonsConfig = [];
+    let allowedAddons = [];
+    const customAddonPrices = {};
+
+    if (hasAddons && Array.isArray(this.currentEditingAddons)) {
+      // Sincroniza qualquer input de preço ainda em foco
+      const priceInputs = document.querySelectorAll('#adminAddonsList .admin-addon-price-input');
+      priceInputs.forEach(inp => {
+        const id = inp.dataset.id;
+        const item = this.currentEditingAddons.find(a => a.id === id);
+        if (item) item.price = Math.max(0, parseFloat(inp.value) || 0);
+      });
+
+      // Colete a lista de adicionais selecionados com seus nomes e preços editados no formulário
+      const selectedAddons = this.currentEditingAddons.filter(a => a.selected);
+      const baseCatalog = window.addonItems || window.menuData?.addonItems || {};
+
+      // 1. Array padronizado para a coluna addons_config da tabela products do Supabase
+      addonsConfig = selectedAddons.map(a => {
+        const base = baseCatalog[a.id];
+        const formattedName = (base && (!a.name || a.name === a.id)) ? base.name : (a.name || (base ? base.name : a.id));
+        const rawP = Number(a.price);
+        const finalPrice = (rawP > 0 || !base) ? rawP : Number(base.price);
+        return {
+          id: String(a.id),
+          name: formattedName,
+          price: finalPrice
+        };
+      });
+
+      // 2. Mapeamento legado para compatibilidade com allowed_addons
+      allowedAddons = selectedAddons.map(a => {
+        customAddonPrices[a.id] = Number(a.price);
+        const base = baseCatalog[a.id];
+        if (base && Number(base.price).toFixed(2) === Number(a.price).toFixed(2)) {
+          return a.id;
+        }
+        return JSON.stringify({
+          id: a.id,
+          name: a.name,
+          price: Number(a.price)
+        });
+      });
+    }
+
+    const productData = {
+      id: existingId || null,
+      name,
+      categoryId,
+      price,
+      description,
+      ingredients,
+      imageUrl,
+      videoUrl: null,
+      featured,
+      available,
+      addonsConfig,
+      addons_config: addonsConfig,
+      allowedAddons,
+      customAddonPrices
+    };
+
+    await this.saveProduct(productData);
+  },
+
+  async saveProduct(productData) {
+    if (!productData || !productData.name || !productData.categoryId || productData.price == null) {
+      return false;
+    }
+
+    const products = window.menuData.products;
+    const isEditing = !!productData.id && products.some(p => p.id === productData.id);
+    let finalProduct = { ...productData };
+
+    if (!finalProduct.id) {
+      finalProduct.id = `${productData.categoryId}-${Date.now().toString(36)}`;
+    }
+
+    // 1. Sincroniza com Supabase se disponível
+    if (typeof SupabaseService !== 'undefined') {
+      try {
+        if (isEditing) {
+          const updated = await SupabaseService.updateProduct(finalProduct.id, finalProduct);
+          if (updated) finalProduct = { ...finalProduct, ...updated };
+        } else {
+          const created = await SupabaseService.createProduct(finalProduct);
+          if (created) finalProduct = { ...finalProduct, ...created };
+        }
+      } catch (err) {
+        console.error('[Supabase] Erro ao sincronizar produto no banco:', err);
+        if (window.showToast) window.showToast('⚠️ Salvo localmente (offline do banco)');
+      }
+    }
+
+    // 2. Atualiza estado local
+    if (isEditing) {
+      const index = products.findIndex(p => p.id === finalProduct.id);
+      if (index !== -1) {
+        products[index] = { ...products[index], ...finalProduct };
+      } else {
+        products.unshift(finalProduct);
+      }
+    } else {
+      products.unshift(finalProduct);
+    }
+
+    this.persistProducts();
+    renderProducts();
+    this.closeProductFormModal();
+
+    if (window.showToast) {
+      window.showToast(isEditing ? '✓ Produto atualizado com sucesso!' : '✓ Novo produto cadastrado no cardápio!');
+    }
+    return true;
+  },
+
+  confirmDelete(productId) {
+    const product = window.menuData?.products.find(p => p.id === productId);
+    if (!product) return;
+
+    this.productIdToDelete = productId;
+    const modal = document.getElementById('adminConfirmModal');
+    const descEl = document.getElementById('adminConfirmDesc');
+
+    if (descEl) {
+      descEl.textContent = `Tem certeza que deseja remover "${product.name}" do cardápio?`;
+    }
+
+    if (modal) {
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+  },
+
+  closeConfirmModal() {
+    this.productIdToDelete = null;
+    const modal = document.getElementById('adminConfirmModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  },
+
+  async deleteProduct(productId) {
+    if (!productId) return;
+
+    // 1. Sincroniza com Supabase se disponível
+    if (typeof SupabaseService !== 'undefined') {
+      try {
+        await SupabaseService.deleteProduct(productId);
+      } catch (err) {
+        console.error('[Supabase] Erro ao excluir produto no banco:', err);
+      }
+    }
+
+    // 2. Remove do estado local
+    window.menuData.products = window.menuData.products.filter(p => p.id !== productId);
+    this.persistProducts();
+    renderProducts();
+    this.closeConfirmModal();
+
+    if (window.showToast) {
+      window.showToast('✓ Produto excluído do cardápio.');
+    }
+  },
+
+  async toggleAvailability(productId) {
+    const product = window.menuData?.products.find(p => p.id === productId);
+    if (!product) return;
+
+    const newStatus = product.available === false ? true : false;
+
+    // 1. Sincroniza com Supabase se disponível
+    if (typeof SupabaseService !== 'undefined') {
+      try {
+        await SupabaseService.toggleAvailability(productId, newStatus);
+      } catch (err) {
+        console.error('[Supabase] Erro ao alternar disponibilidade no banco:', err);
+      }
+    }
+
+    // 2. Atualiza estado local e re-renderiza
+    product.available = newStatus;
+    this.persistProducts();
+    renderProducts();
+
+    if (window.showToast) {
+      window.showToast(
+        product.available
+          ? `✓ "${product.name}" agora está Disponível!`
+          : `⏸ "${product.name}" foi Pausado (Esgotado).`
+      );
+    }
+  },
+
+  /**
+   * Sincronização em massa do catálogo base para o Supabase
+   * Executa diretamente sem pop-up de confirmação
+   */
+  async syncBaseToSupabase() {
+    const btnAdminSync = document.getElementById('btnAdminSyncSupabase');
+    if (!btnAdminSync || btnAdminSync.disabled) return;
+
+    try {
+      const originalText = btnAdminSync.innerHTML;
+      btnAdminSync.disabled = true;
+      btnAdminSync.textContent = 'Sincronizando...';
+
+      if (window.SupabaseService) {
+        await window.SupabaseService.seedProducts(window.menuData.products);
+      }
+      Utils.showToast('✓ Base sincronizada com sucesso!');
+      btnAdminSync.innerHTML = originalText;
+    } catch (err) {
+      console.error(err);
+      Utils.showToast('Erro ao sincronizar.');
+      btnAdminSync.innerHTML = originalText;
+    } finally {
+      btnAdminSync.disabled = false;
+    }
+  },
+
+  setupListeners() {
+    // Botão de acesso ao ADM no header
+    const btnOpenAuth = document.getElementById('btnOpenAdminAuth');
+    if (btnOpenAuth) {
+      btnOpenAuth.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.openAuthModal();
+      });
+    }
+
+    // Fechar modal de login
+    const btnCloseAuth = document.getElementById('btnCloseAdminAuth');
+    if (btnCloseAuth) {
+      btnCloseAuth.addEventListener('click', () => this.closeAuthModal());
+    }
+
+    // Formulário de Login ADM
+    const authForm = document.getElementById('adminAuthForm');
+    if (authForm) {
+      authForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const pwdInput = document.getElementById('adminAuthPassword');
+        await this.login(pwdInput ? pwdInput.value : '');
+      });
+    }
+
+    // Alternar visibilidade da senha
+    const btnTogglePwd = document.getElementById('btnToggleAuthPwd');
+    if (btnTogglePwd) {
+      btnTogglePwd.addEventListener('click', () => {
+        const pwdInput = document.getElementById('adminAuthPassword');
+        if (!pwdInput) return;
+        const isPassword = pwdInput.type === 'password';
+        pwdInput.type = isPassword ? 'text' : 'password';
+        btnTogglePwd.style.color = isPassword ? 'var(--brand-terracotta)' : 'var(--text-dim)';
+      });
+    }
+
+    // Botões da Barra Superior
+    const btnAdminSync = document.getElementById('btnAdminSyncSupabase');
+    if (btnAdminSync) {
+      btnAdminSync.addEventListener('click', async () => {
+        try {
+          const originalText = btnAdminSync.innerHTML;
+          btnAdminSync.disabled = true;
+          btnAdminSync.textContent = 'Sincronizando...';
+
+          if (window.SupabaseService) {
+            await window.SupabaseService.seedProducts(window.menuData.products);
+          }
+          Utils.showToast('✓ Base sincronizada com sucesso!');
+          btnAdminSync.innerHTML = originalText;
+        } catch (err) {
+          console.error(err);
+          Utils.showToast('Erro ao sincronizar.');
+          btnAdminSync.innerHTML = originalText;
+        } finally {
+          btnAdminSync.disabled = false;
+        }
+      });
+    }
+
+    const btnNewProduct = document.getElementById('btnAdminNewProduct');
+    if (btnNewProduct) {
+      btnNewProduct.addEventListener('click', () => this.openNewModal());
+    }
+
+    const btnLogout = document.getElementById('btnAdminLogout');
+    if (btnLogout) {
+      btnLogout.addEventListener('click', () => this.logout());
+    }
+
+    // Botões do Modal de Criação / Edição
+    const btnCloseForm = document.getElementById('btnCloseProductForm');
+    if (btnCloseForm) {
+      btnCloseForm.addEventListener('click', () => this.closeProductFormModal());
+    }
+
+    const btnCancelProduct = document.getElementById('btnAdminCancelProduct');
+    if (btnCancelProduct) {
+      btnCancelProduct.addEventListener('click', () => this.closeProductFormModal());
+    }
+
+    // Alternar visibilidade e estado do switch de Adicionais
+    const hasAddonsSwitch = document.getElementById('adminProdHasAddons');
+    if (hasAddonsSwitch) {
+      hasAddonsSwitch.addEventListener('change', (e) => {
+        const configSection = document.getElementById('adminAddonsConfigSection');
+        if (configSection) {
+          if (e.target.checked) {
+            configSection.style.display = 'flex';
+            if (!this.currentEditingAddons || this.currentEditingAddons.length === 0) {
+              this.initAddonsConfig(null);
+            }
+          } else {
+            configSection.style.display = 'none';
+          }
+        }
+      });
+    }
+
+    // Ações rápidas de Adicionais (Marcar Todos / Desmarcar Todos)
+    // Ações rápidas de Adicionais (Marcar Todos / Desmarcar Todos)
+    const btnSelectAll = document.getElementById('btnAdminAddonsSelectAll');
+    if (btnSelectAll) {
+      btnSelectAll.addEventListener('click', () => {
+        if (Array.isArray(this.currentEditingAddons)) {
+          this.currentEditingAddons.forEach(a => { a.selected = true; });
+          const listEl = document.getElementById('adminAddonsList');
+          if (listEl) {
+            listEl.querySelectorAll('.admin-addon-checkbox').forEach(cb => {
+              cb.checked = true;
+              const row = cb.closest('.admin-addon-item-row');
+              if (row) {
+                row.classList.add('is-active', 'is-selected');
+                row.classList.remove('is-inactive');
+              }
+            });
+          }
+        }
+      });
+    }
+
+    const btnDeselectAll = document.getElementById('btnAdminAddonsDeselectAll');
+    if (btnDeselectAll) {
+      btnDeselectAll.addEventListener('click', () => {
+        if (Array.isArray(this.currentEditingAddons)) {
+          this.currentEditingAddons.forEach(a => { a.selected = false; });
+          const listEl = document.getElementById('adminAddonsList');
+          if (listEl) {
+            listEl.querySelectorAll('.admin-addon-checkbox').forEach(cb => {
+              cb.checked = false;
+              const row = cb.closest('.admin-addon-item-row');
+              if (row) {
+                row.classList.remove('is-active', 'is-selected');
+                row.classList.add('is-inactive');
+              }
+            });
+          }
+        }
+      });
+    }
+
+    // Delegação de eventos da lista de adicionais: atualiza apenas estado e classe sem recriar o DOM
+    const addonsListEl = document.getElementById('adminAddonsList');
+    if (addonsListEl) {
+      addonsListEl.addEventListener('change', (e) => {
+        const cb = e.target.closest('.admin-addon-checkbox');
+        if (cb) {
+          const id = cb.dataset.id;
+          const item = this.currentEditingAddons.find(a => a.id === id);
+          if (item) {
+            item.selected = cb.checked;
+            const row = cb.closest('.admin-addon-item-row');
+            if (row) {
+              row.classList.toggle('is-selected', item.selected);
+              row.classList.toggle('is-active', item.selected);
+              row.classList.toggle('is-inactive', !item.selected);
+            }
+          }
+        }
+      });
+
+      addonsListEl.addEventListener('input', (e) => {
+        const inp = e.target.closest('.admin-addon-price-input');
+        if (inp) {
+          const id = inp.dataset.id;
+          const item = this.currentEditingAddons.find(a => a.id === id);
+          if (item) {
+            item.price = Math.max(0, parseFloat(inp.value) || 0);
+          }
+        }
+      });
+
+      addonsListEl.addEventListener('click', (e) => {
+        const btnRemove = e.target.closest('.btn-remove-custom-addon');
+        if (btnRemove) {
+          const id = btnRemove.dataset.id;
+          this.currentEditingAddons = this.currentEditingAddons.filter(a => a.id !== id);
+          this.renderAddonsConfig();
+        }
+      });
+    }
+
+    // Adicionar Novo Adicional Customizado
+    const btnAddCustom = document.getElementById('btnAdminAddCustomAddon');
+    if (btnAddCustom) {
+      btnAddCustom.addEventListener('click', () => {
+        const nameInput = document.getElementById('adminNewAddonName');
+        const priceInput = document.getElementById('adminNewAddonPrice');
+        if (!nameInput) return;
+
+        const name = nameInput.value.trim();
+        if (!name) {
+          if (typeof Utils !== 'undefined' && Utils.showToast) {
+            Utils.showToast('Informe o nome do novo adicional.');
+          } else if (window.showToast) {
+            window.showToast('Informe o nome do novo adicional.');
+          }
+          nameInput.focus();
+          return;
+        }
+
+        const price = Math.max(0, parseFloat(priceInput?.value) || 0);
+        const slug = 'custom-' + name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-') + '-' + Date.now().toString(36).slice(-3);
+
+        if (!Array.isArray(this.currentEditingAddons)) {
+          this.currentEditingAddons = [];
+        }
+
+        this.currentEditingAddons.push({
+          id: slug,
+          name: name,
+          price: price,
+          selected: true,
+          isCustom: true
+        });
+
+        nameInput.value = '';
+        if (priceInput) priceInput.value = '';
+
+        this.renderAddonsConfig();
+
+        if (typeof Utils !== 'undefined' && Utils.showToast) {
+          Utils.showToast(`✓ Adicional "${name}" incluído!`);
+        } else if (window.showToast) {
+          window.showToast(`✓ Adicional "${name}" incluído!`);
+        }
+      });
+    }
+
+    const productForm = document.getElementById('adminProductForm');
+    if (productForm) {
+      productForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.saveProductFromForm();
+      });
+    }
+
+    // Modal de Confirmação de Exclusão
+    const btnCancelDelete = document.getElementById('btnAdminCancelDelete');
+    if (btnCancelDelete) {
+      btnCancelDelete.addEventListener('click', () => this.closeConfirmModal());
+    }
+
+    const btnConfirmDelete = document.getElementById('btnAdminConfirmDelete');
+    if (btnConfirmDelete) {
+      btnConfirmDelete.addEventListener('click', () => {
+        if (this.productIdToDelete) {
+          this.deleteProduct(this.productIdToDelete);
+        }
+      });
+    }
+
+    // Fechar ao clicar no overlay de cada modal de ADM
+    const modals = [
+      { id: 'adminAuthModal', close: () => this.closeAuthModal() },
+      { id: 'adminProductFormModal', close: () => this.closeProductFormModal() },
+      { id: 'adminConfirmModal', close: () => this.closeConfirmModal() }
+    ];
+
+    modals.forEach(({ id, close }) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('click', (e) => {
+          if (e.target === el) close();
+        });
+      }
+    });
+
+    // Fechar com tecla ESC
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const authModal = document.getElementById('adminAuthModal');
+        const formModal = document.getElementById('adminProductFormModal');
+        const confirmModal = document.getElementById('adminConfirmModal');
+
+        if (confirmModal && confirmModal.classList.contains('active')) {
+          this.closeConfirmModal();
+        } else if (formModal && formModal.classList.contains('active')) {
+          this.closeProductFormModal();
+        } else if (authModal && authModal.classList.contains('active')) {
+          this.closeAuthModal();
+        }
+      }
+    });
+  }
+};
+
+// Expõe funções necessárias globalmente
 window.openProductDetails = openProductDetails;
 window.showToast = showToast;
+window.Utils = Utils;
 window.updateItemQuantity = updateItemQuantity;
 window.removeItemFromCart = removeItemFromCart;
 window.openCartDrawer = openCartDrawer;
 window.closeCartDrawer = closeCartDrawer;
+window.AdminManager = AdminManager;

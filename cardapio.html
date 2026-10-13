@@ -25,12 +25,55 @@
   <link rel="icon" type="image/jpeg" href="assets/images/Logo_Sobrado.jpg">
 
   <!-- Estilos da Aplicação -->
-  <link rel="stylesheet" href="assets/css/styles.css">
+  <link rel="stylesheet" href="assets/css/styles.css?v=2.6">
 </head>
 
 <body>
 
   <div class="app-container" id="menuAppContainer">
+
+    <!-- Barra Superior Fixa do ADM (Visível quando autenticado) -->
+    <aside class="admin-top-bar" id="adminTopBar" style="display: none;" aria-label="Painel Administrativo">
+      <div class="admin-top-bar-inner">
+        <!-- Linha 1: Status "⚡ Painel ADM" à esquerda + "Sair do ADM" à direita -->
+        <div class="admin-top-bar-header-row">
+          <div class="admin-top-bar-badge">
+            <span class="admin-pulse-dot" aria-hidden="true"></span>
+            <span class="admin-top-bar-text">⚡ Painel ADM</span>
+          </div>
+          <button type="button" class="btn-admin-bar btn-admin-bar-logout btn-admin-action" id="btnAdminLogout" title="Sair do modo administrador" aria-label="Sair do modo administrador">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Sair do ADM</span>
+          </button>
+        </div>
+
+        <!-- Linha 2: "Sincronizar Base" + "+ Novo Produto" -->
+        <div class="admin-top-bar-actions admin-bar-actions">
+          <button type="button" class="btn-admin-bar btn-admin-bar-sync btn-admin-action" id="btnAdminSyncSupabase" title="Sincronizar cardápio base para o banco Supabase" aria-label="Sincronizar cardápio base para o Supabase">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+              <path d="M16 21h5v-5"></path>
+            </svg>
+            <span>Sincronizar Base</span>
+          </button>
+          <button type="button" class="btn-admin-bar btn-admin-bar-new btn-admin-action" id="btnAdminNewProduct" aria-label="Criar novo produto">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>+ Novo Produto</span>
+          </button>
+        </div>
+      </div>
+    </aside>
 
     <!-- Header Compacto Sticky -->
     <header class="menu-header">
@@ -62,13 +105,24 @@
         </div>
 
         <!-- Botão Wi-Fi Rápido no Header -->
-        <button type="button" class="header-wifi-btn btn-trigger-wifi" aria-label="Ver Wi-Fi">
+        <button type="button" class="header-wifi-btn btn-trigger-wifi" aria-label="Ver Wi-Fi" title="Wi-Fi">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
             stroke-linecap="round" stroke-linejoin="round">
             <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
             <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
             <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
             <line x1="12" y1="20" x2="12.01" y2="20"></line>
+          </svg>
+        </button>
+
+        <!-- Botão de Acesso ao ADM no Header -->
+        <button type="button" class="header-admin-btn" id="btnOpenAdminAuth" aria-label="Acesso Administrativo" title="Painel Administrativo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7.5" cy="15.5" r="4.5"></circle>
+            <path d="m21 3-9.5 9.5"></path>
+            <path d="m15.5 7.5 3 3"></path>
+            <path d="m18.5 4.5 2 2"></path>
           </svg>
         </button>
 
@@ -284,14 +338,274 @@
       </div>
     </div>
 
+    <!-- Modal de Autenticação ADM -->
+    <div class="modal-overlay" id="adminAuthModal" role="dialog" aria-modal="true" aria-labelledby="adminAuthTitle">
+      <div class="admin-auth-modal-box">
+        <button type="button" class="btn-close-modal-clean" id="btnCloseAdminAuth" aria-label="Fechar autenticação">✕</button>
+
+        <div class="admin-auth-icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7.5" cy="15.5" r="4.5"></circle>
+            <path d="m21 3-9.5 9.5"></path>
+            <path d="m15.5 7.5 3 3"></path>
+            <path d="m18.5 4.5 2 2"></path>
+          </svg>
+        </div>
+
+        <h2 class="admin-modal-title" id="adminAuthTitle">Acesso Administrativo</h2>
+        <p class="admin-modal-desc">Digite a senha de administrador para gerenciar produtos, preços e disponibilidade do cardápio.</p>
+
+        <form id="adminAuthForm" class="admin-auth-form" onsubmit="return false;">
+          <div class="admin-form-group">
+            <label for="adminAuthPassword" class="admin-form-label">Senha de Administrador</label>
+            <div class="admin-password-input-wrap">
+              <input 
+                type="password" 
+                id="adminAuthPassword" 
+                class="admin-form-input" 
+                placeholder="Digite a senha de administrador" 
+                autocomplete="current-password"
+                required 
+              />
+              <button type="button" class="btn-toggle-pwd-visibility" id="btnToggleAuthPwd" aria-label="Alternar visibilidade da senha" tabindex="-1">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+            <div class="admin-form-feedback-error" id="adminAuthError" style="display: none;"></div>
+          </div>
+
+          <button type="submit" class="btn-primary-action btn-admin-auth-submit" id="btnSubmitAdminAuth">
+            Entrar no Painel
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal de Formulário de Produto (Criar / Editar) -->
+    <div class="modal-overlay" id="adminProductFormModal" role="dialog" aria-modal="true" aria-labelledby="adminProductModalTitle">
+      <div class="admin-modal-box admin-product-modal-content">
+        <div class="admin-modal-header">
+          <div class="admin-modal-title-wrap">
+            <h2 class="admin-modal-title" id="adminProductModalTitle">Novo Produto</h2>
+            <p class="admin-modal-subtitle" id="adminProductModalSubtitle">Preencha as informações do produto para o cardápio.</p>
+          </div>
+          <button type="button" class="btn-close-modal-clean" id="btnCloseProductForm" aria-label="Fechar formulário">✕</button>
+        </div>
+
+        <form id="adminProductForm" class="admin-product-form" onsubmit="return false;">
+          <div class="admin-form-scrollable-body">
+            <input type="hidden" id="adminProdId" value="" />
+
+            <!-- Nome do Produto -->
+          <div class="admin-form-group">
+            <label for="adminProdName" class="admin-form-label">
+              Nome do Produto <span class="required-star">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="adminProdName" 
+              class="admin-form-input" 
+              placeholder="Ex: 01. PLT (O MAIS VENDIDO DA CASA)" 
+              required 
+            />
+          </div>
+
+          <!-- Linha: Categoria e Preço -->
+          <div class="admin-form-row">
+            <div class="admin-form-group flex-category">
+              <label for="adminProdCategory" class="admin-form-label">
+                Categoria <span class="required-star">*</span>
+              </label>
+              <div class="admin-select-wrapper">
+                <select id="adminProdCategory" class="admin-form-select" required>
+                  <!-- Opções preenchidas dinamicamente via JS -->
+                </select>
+                <span class="admin-select-arrow" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            <div class="admin-form-group flex-price">
+              <label for="adminProdPrice" class="admin-form-label">
+                Preço em R$ <span class="required-star">*</span>
+              </label>
+              <div class="admin-price-input-wrap">
+                <span class="admin-price-prefix">R$</span>
+                <input 
+                  type="number" 
+                  id="adminProdPrice" 
+                  class="admin-form-input admin-price-input" 
+                  placeholder="0,00" 
+                  step="0.01" 
+                  min="0" 
+                  required 
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Descrição Detalhada -->
+          <div class="admin-form-group">
+            <label for="adminProdDesc" class="admin-form-label">
+              Descrição Detalhada
+            </label>
+            <textarea 
+              id="adminProdDesc" 
+              class="admin-form-textarea" 
+              rows="3" 
+              placeholder="Ex: Pão brioche selado, hambúrguer Angus artesanal de 110g, queijo empanado..."
+            ></textarea>
+          </div>
+
+          <!-- Ingredientes -->
+          <div class="admin-form-group">
+            <label for="adminProdIngredients" class="admin-form-label">
+              Ingredientes <span class="admin-label-hint">(separados por vírgula)</span>
+            </label>
+            <input 
+              type="text" 
+              id="adminProdIngredients" 
+              class="admin-form-input" 
+              placeholder="Ex: Pão brioche, Angus 110g, Bacon, Mussarela empanada" 
+            />
+          </div>
+
+          <!-- Imagem (Caminho ou URL) -->
+          <div class="admin-form-group">
+            <label for="adminProdImage" class="admin-form-label">
+              Caminho / URL da Imagem
+            </label>
+            <input 
+              type="text" 
+              id="adminProdImage" 
+              class="admin-form-input" 
+              placeholder="Ex: assets/images/products/plt.png ou https://..." 
+            />
+          </div>
+
+          <!-- Opções e Checkboxes -->
+          <div class="admin-checkboxes-box">
+            <label class="admin-toggle-item" for="adminProdHasAddons">
+              <input type="checkbox" id="adminProdHasAddons" class="admin-checkbox-real" checked />
+              <span class="admin-toggle-switch" aria-hidden="true"></span>
+              <div class="admin-toggle-labels">
+                <span class="admin-toggle-title">Permitir Adicionais</span>
+                <span class="admin-toggle-sub">Habilita seleção de bacon, queijo, etc. no item</span>
+              </div>
+            </label>
+
+            <!-- Container Expansível de Configuração Dinâmica de Adicionais -->
+            <div id="adminAddonsConfigSection" class="admin-addons-config" style="display: none;">
+              <div class="admin-addons-config-header">
+                <div class="admin-addons-config-titles">
+                  <span class="admin-addons-config-title">Adicionais Permitidos para este Item</span>
+                  <span class="admin-addons-config-desc">Selecione e ajuste os valores se necessário</span>
+                </div>
+                <div class="admin-addons-quick-actions">
+                  <button type="button" class="btn-addons-quick" id="btnAdminAddonsSelectAll" title="Marcar todos">Todos</button>
+                  <button type="button" class="btn-addons-quick" id="btnAdminAddonsDeselectAll" title="Desmarcar todos">Nenhum</button>
+                </div>
+              </div>
+
+              <!-- Lista de Adicionais Padrão & Customizados -->
+              <div class="admin-addons-list" id="adminAddonsList">
+                <!-- Renderizado dinamicamente via JS -->
+              </div>
+
+              <!-- Seção para Novo Adicional Customizado -->
+              <div class="admin-addon-new-box">
+                <div class="admin-addon-new-title">+ Novo Adicional Customizado</div>
+                <div class="admin-addon-new-row">
+                  <input 
+                    type="text" 
+                    id="adminNewAddonName" 
+                    class="admin-form-input admin-addon-new-name" 
+                    placeholder="Nome (ex: Molho Especial)" 
+                  />
+                  <div class="admin-addon-price-input-wrap">
+                    <span class="admin-addon-price-prefix">R$</span>
+                    <input 
+                      type="number" 
+                      id="adminNewAddonPrice" 
+                      class="admin-form-input admin-addon-new-price" 
+                      placeholder="0,00" 
+                      step="0.50" 
+                      min="0" 
+                    />
+                  </div>
+                  <button type="button" class="btn-admin-add-addon" id="btnAdminAddCustomAddon">
+                    <span>+ Adicionar</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <label class="admin-toggle-item" for="adminProdFeatured">
+              <input type="checkbox" id="adminProdFeatured" class="admin-checkbox-real" />
+              <span class="admin-toggle-switch" aria-hidden="true"></span>
+              <div class="admin-toggle-labels">
+                <span class="admin-toggle-title">Destaque ("Mais Pedido")</span>
+                <span class="admin-toggle-sub">Adiciona etiqueta de produto popular em destaque</span>
+              </div>
+            </label>
+
+            <label class="admin-toggle-item" for="adminProdAvailable">
+              <input type="checkbox" id="adminProdAvailable" class="admin-checkbox-real" checked />
+              <span class="admin-toggle-switch" aria-hidden="true"></span>
+              <div class="admin-toggle-labels">
+                <span class="admin-toggle-title">Produto Disponível</span>
+                <span class="admin-toggle-sub">Desmarque para pausar/esgotar temporariamente</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="admin-modal-footer admin-form-actions">
+          <button type="button" class="btn-admin-modal-cancel" id="btnAdminCancelProduct">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-primary-action btn-admin-modal-save" id="btnAdminSaveProduct">
+            Salvar Produto
+          </button>
+        </div>
+      </form>
+      </div>
+    </div>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <div class="modal-overlay" id="adminConfirmModal" role="dialog" aria-modal="true" aria-labelledby="adminConfirmTitle">
+      <div class="admin-confirm-box">
+        <div class="admin-confirm-icon" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </div>
+        <h3 class="admin-confirm-title" id="adminConfirmTitle">Excluir Produto?</h3>
+        <p class="admin-confirm-desc" id="adminConfirmDesc">Tem certeza que deseja remover este produto do cardápio? Esta ação pode ser revertida nos dados locais se necessário.</p>
+        <div class="admin-confirm-actions">
+          <button type="button" class="btn-admin-modal-cancel" id="btnAdminCancelDelete">Cancelar</button>
+          <button type="button" class="btn-admin-danger" id="btnAdminConfirmDelete">Sim, Excluir</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast de Notificação -->
     <div class="toast-notice" id="toastNotice" role="status" aria-live="polite"></div>
 
   </div>
 
   <!-- Scripts -->
-  <script src="assets/js/products.js"></script>
-  <script src="assets/js/app.js"></script>
+  <script src="assets/js/products.js?v=2.6"></script>
+  <script src="assets/js/supabase.js?v=2.6"></script>
+  <script src="assets/js/app.js?v=2.6"></script>
 </body>
 
 </html>
