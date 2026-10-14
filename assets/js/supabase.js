@@ -350,6 +350,57 @@ const SupabaseService = {
       throw new Error('Falha ao validar credenciais no servidor.');
     }
     return await response.json(); // Retorna true ou false
+  },
+
+  /**
+   * Busca configurações de Wi-Fi no Supabase (app_settings)
+   * GET /rest/v1/app_settings?key=eq.wifi_config
+   */
+  async fetchWifiConfig() {
+    try {
+      const response = await fetch(`${this.url}/rest/v1/app_settings?key=eq.wifi_config&select=key,value`, {
+        method: 'GET',
+        headers: this.getHeaders()
+      });
+
+      if (!response.ok) return null;
+
+      const rows = await response.json();
+      if (Array.isArray(rows) && rows.length > 0 && rows[0].value) {
+        const val = typeof rows[0].value === 'string' ? JSON.parse(rows[0].value) : rows[0].value;
+        return val;
+      }
+    } catch (err) {
+      console.warn('[SupabaseService] Erro ao buscar wifi_config:', err);
+    }
+    return null;
+  },
+
+  /**
+   * Salva configurações de Wi-Fi no Supabase (app_settings)
+   * POST /rest/v1/app_settings com merge-duplicates
+   */
+  async saveWifiConfig(config) {
+    try {
+      const payload = {
+        key: 'wifi_config',
+        value: config
+      };
+
+      const response = await fetch(`${this.url}/rest/v1/app_settings`, {
+        method: 'POST',
+        headers: this.getHeaders('resolution=merge-duplicates,return=representation'),
+        body: JSON.stringify([payload])
+      });
+
+      if (response.ok) {
+        const rows = await response.json();
+        return rows && rows[0] ? rows[0].value : config;
+      }
+    } catch (err) {
+      console.warn('[SupabaseService] Erro ao salvar wifi_config no Supabase:', err);
+    }
+    return false;
   }
 };
 

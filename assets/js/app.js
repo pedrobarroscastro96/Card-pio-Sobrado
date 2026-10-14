@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
 function initApp() {
   const currentTable = getActiveTable();
 
+  // Inicializa o gerenciador de Wi-Fi (carrega localStorage e sincroniza com Supabase)
+  WifiManager.init();
+
   // Identifica a página atual
   const isMenuPage = document.getElementById('menuAppContainer') !== null;
   const isHubPage = document.getElementById('hubAppContainer') !== null;
@@ -78,6 +81,66 @@ function initHub(table) {
     if (tableBadge) {
       tableBadge.style.display = 'none';
     }
+  }
+
+  // Inicializa o desbloqueio do Wi-Fi condicionado à visita ao Instagram
+  initInstagramWifiUnlock();
+}
+
+/**
+ * ---------------------------------------------------------------------
+ * 2.1 DESBLOQUEIO DO WI-FI VIA VISITA AO INSTAGRAM
+ * ---------------------------------------------------------------------
+ */
+function initInstagramWifiUnlock() {
+  const wifiBtn = document.getElementById('hubWifiBtn');
+  const instagramBtn = document.getElementById('hubInstagramLink');
+
+  if (!wifiBtn) return;
+
+  const wifiDesc = document.getElementById('hubWifiDesc') || wifiBtn.querySelector('.hub-btn-desc');
+  const activeIcon = wifiBtn.querySelector('.wifi-icon-active');
+  const lockedIcon = wifiBtn.querySelector('.wifi-icon-locked');
+
+  const updateState = (unlocked) => {
+    if (unlocked) {
+      wifiBtn.classList.remove('is-locked');
+      if (wifiDesc) {
+        wifiDesc.textContent = 'Nome da rede e senha rápida';
+      }
+      if (activeIcon) activeIcon.style.display = 'block';
+      if (lockedIcon) lockedIcon.style.display = 'none';
+    } else {
+      wifiBtn.classList.add('is-locked');
+      if (wifiDesc) {
+        wifiDesc.textContent = 'Siga-nos no Instagram para receber o acesso';
+      }
+      if (activeIcon) activeIcon.style.display = 'none';
+      if (lockedIcon) lockedIcon.style.display = 'block';
+    }
+  };
+
+  // Verifica se já visitou o Instagram anteriormente
+  const isVisited = localStorage.getItem('sobrado_instagram_visited') === 'true';
+  updateState(isVisited);
+
+  // Ao clicar no botão de Wi-Fi enquanto bloqueado: intercepta, exibe toast e não abre modal
+  wifiBtn.addEventListener('click', (e) => {
+    const currentlyVisited = localStorage.getItem('sobrado_instagram_visited') === 'true';
+    if (!currentlyVisited || wifiBtn.classList.contains('is-locked')) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      showToast('Siga nosso Instagram acima para liberar o Wi-Fi!', '🔒');
+      return false;
+    }
+  }, true);
+
+  // Ao clicar no botão "Nosso Instagram": grava chave e desbloqueia em tempo real
+  if (instagramBtn) {
+    instagramBtn.addEventListener('click', () => {
+      localStorage.setItem('sobrado_instagram_visited', 'true');
+      updateState(true);
+    });
   }
 }
 
@@ -1052,7 +1115,120 @@ function renderDrawerAddons(product) {
 
 /**
  * ---------------------------------------------------------------------
- * 7. MODAL DE WI-FI & COPIAR SENHA
+ * 7. GERENCIADOR DE CONFIGURAÇÕES DE WI-FI
+ * ---------------------------------------------------------------------
+ */
+const WifiManager = {
+  LOCAL_STORAGE_KEY: 'sobrado_wifi_config',
+  defaultConfig: {
+    ssid: 'O Sobrado - Clientes',
+    password: 'sobradoburger'
+  },
+
+  init() {
+    // 1. Aplica dados locais imediatamente (sem flash de dados antigos)
+    const current = this.getWifiConfig();
+    this.applyToDOM(current);
+
+    // 2. Tenta sincronizar com Supabase em segundo plano
+    this.syncFromSupabase();
+
+    // 3. Sincroniza em tempo real se alterado em outra aba
+    window.addEventListener('storage', (e) => {
+      if (e.key === this.LOCAL_STORAGE_KEY) {
+        this.applyToDOM(this.getWifiConfig());
+      }
+    });
+  },
+
+  getWifiConfig() {
+    try {
+      const stored = localStorage.getItem(this.LOCAL_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed.ssid === 'string' && typeof parsed.password === 'string') {
+          return {
+            ssid: parsed.ssid.trim() || this.defaultConfig.ssid,
+            password: parsed.password.trim() || this.defaultConfig.password
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar wifi_config local:', e);
+    }
+    return {
+      ssid: window.menuData?.restaurant?.wifi?.ssid || this.defaultConfig.ssid,
+      password: window.menuData?.restaurant?.wifi?.password || this.defaultConfig.password
+    };
+  },
+
+  applyToDOM(config) {
+    if (!config) return;
+
+    // Atualiza menuData em memória
+    if (window.menuData?.restaurant?.wifi) {
+      window.menuData.restaurant.wifi.ssid = config.ssid;
+      window.menuData.restaurant.wifi.password = config.password;
+    }
+
+    // Atualiza os elementos de texto no modal
+    const ssidEls = document.querySelectorAll('.wifi-ssid-value, #wifiModalSsidVal');
+    const pwdEls = document.querySelectorAll('.wifi-password-value, #wifiModalPasswordVal');
+    ssidEls.forEach(el => { el.textContent = config.ssid; });
+    pwdEls.forEach(el => { el.textContent = config.password; });
+  },
+
+  async syncFromSupabase() {
+    if (typeof SupabaseService !== 'undefined' && typeof SupabaseService.fetchWifiConfig === 'function') {
+      try {
+        const remote = await SupabaseService.fetchWifiConfig();
+        if (remote && remote.ssid && remote.password) {
+          const current = this.getWifiConfig();
+          if (remote.ssid !== current.ssid || remote.password !== current.password) {
+            this.saveLocal(remote);
+            this.applyToDOM(remote);
+          }
+        }
+      } catch (e) {
+        console.warn('Erro ao sincronizar wifi do Supabase:', e);
+      }
+    }
+  },
+
+  saveLocal(config) {
+    try {
+      localStorage.setItem(this.LOCAL_STORAGE_KEY, JSON.stringify(config));
+    } catch (e) {
+      console.error('Erro ao salvar wifi_config localmente:', e);
+    }
+    this.applyToDOM(config);
+  },
+
+  async saveWifiConfig(config) {
+    const cleanConfig = {
+      ssid: config.ssid.trim() || this.defaultConfig.ssid,
+      password: config.password.trim() || this.defaultConfig.password
+    };
+
+    // Salva local e reflete no DOM imediatamente
+    this.saveLocal(cleanConfig);
+
+    // Persiste no Supabase se disponível
+    if (typeof SupabaseService !== 'undefined' && typeof SupabaseService.saveWifiConfig === 'function') {
+      try {
+        await SupabaseService.saveWifiConfig(cleanConfig);
+      } catch (e) {
+        console.warn('Erro ao salvar wifi no Supabase:', e);
+      }
+    }
+
+    return true;
+  }
+};
+
+/**
+ * ---------------------------------------------------------------------
+ * 7.1 MODAL DE WI-FI & COPIAR SENHA (COM SUPORTE A EDIÇÃO ADM)
  * ---------------------------------------------------------------------
  */
 function initWifiModal() {
@@ -1061,9 +1237,38 @@ function initWifiModal() {
   const btnCloseWifi = document.getElementById('btnCloseWifi');
   const btnCopyWifi = document.getElementById('btnCopyWifiPassword');
 
+  // Elementos do fluxo de edição ADM
+  const displayView = document.getElementById('wifiDisplayView');
+  const editForm = document.getElementById('wifiEditForm');
+  const mainActions = document.getElementById('wifiMainActions');
+  const btnOpenEdit = document.getElementById('btnOpenWifiEdit');
+  const btnCancelEdit = document.getElementById('btnCancelWifiEdit');
+  const btnSaveEdit = document.getElementById('btnSaveWifiEdit');
+  const ssidInput = document.getElementById('wifiEditSsidInput');
+  const passwordInput = document.getElementById('wifiEditPasswordInput');
+
   if (!wifiModal) return;
 
+  const isUserAdmin = () => {
+    return (typeof AdminManager !== 'undefined' && AdminManager.isAdmin && AdminManager.isAdmin()) ||
+           sessionStorage.getItem('sobrado_admin_auth') === 'true';
+  };
+
+  const resetModalMode = () => {
+    if (editForm) editForm.style.display = 'none';
+    if (displayView) displayView.style.display = 'flex';
+    if (mainActions) mainActions.style.display = 'block';
+
+    const current = WifiManager.getWifiConfig();
+    WifiManager.applyToDOM(current);
+
+    if (btnOpenEdit) {
+      btnOpenEdit.style.display = isUserAdmin() ? 'inline-flex' : 'none';
+    }
+  };
+
   const openWifi = () => {
+    resetModalMode();
     wifiModal.classList.add('active');
     document.body.style.overflow = 'hidden';
   };
@@ -1071,11 +1276,15 @@ function initWifiModal() {
   const closeWifi = () => {
     wifiModal.classList.remove('active');
     document.body.style.overflow = '';
+    setTimeout(resetModalMode, 250);
   };
 
   btnOpenWifiList.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
+      if (btn.classList.contains('is-locked')) {
+        return;
+      }
       openWifi();
     });
   });
@@ -1093,7 +1302,8 @@ function initWifiModal() {
   // Copiar senha
   if (btnCopyWifi) {
     btnCopyWifi.addEventListener('click', () => {
-      const password = window.menuData?.restaurant?.wifi?.password || 'sobradoburger';
+      const config = WifiManager.getWifiConfig();
+      const password = config.password || 'sobradoburger';
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(password).then(() => {
@@ -1104,6 +1314,80 @@ function initWifiModal() {
       } else {
         fallbackCopyText(password);
       }
+    });
+  }
+
+  // Abrir modo de edição ADM
+  if (btnOpenEdit) {
+    btnOpenEdit.addEventListener('click', () => {
+      const current = WifiManager.getWifiConfig();
+      if (ssidInput) ssidInput.value = current.ssid;
+      if (passwordInput) passwordInput.value = current.password;
+
+      if (displayView) displayView.style.display = 'none';
+      if (mainActions) mainActions.style.display = 'none';
+      if (editForm) editForm.style.display = 'flex';
+
+      if (ssidInput) {
+        ssidInput.style.borderColor = '';
+        ssidInput.focus();
+      }
+      if (passwordInput) {
+        passwordInput.style.borderColor = '';
+      }
+    });
+  }
+
+  // Cancelar edição ADM
+  if (btnCancelEdit) {
+    btnCancelEdit.addEventListener('click', () => {
+      if (editForm) editForm.style.display = 'none';
+      if (displayView) displayView.style.display = 'flex';
+      if (mainActions) mainActions.style.display = 'block';
+    });
+  }
+
+  // Salvar credenciais de Wi-Fi ADM
+  if (btnSaveEdit) {
+    btnSaveEdit.addEventListener('click', async () => {
+      const newSsid = ssidInput ? ssidInput.value.trim() : '';
+      const newPassword = passwordInput ? passwordInput.value.trim() : '';
+
+      if (!newSsid) {
+        if (ssidInput) {
+          ssidInput.focus();
+          ssidInput.style.borderColor = '#DC2626';
+        }
+        showToast('Por favor, informe o Nome da Rede (SSID).');
+        return;
+      }
+
+      if (!newPassword) {
+        if (passwordInput) {
+          passwordInput.focus();
+          passwordInput.style.borderColor = '#DC2626';
+        }
+        showToast('Por favor, informe a Senha do Wi-Fi.');
+        return;
+      }
+
+      btnSaveEdit.disabled = true;
+      btnSaveEdit.textContent = 'Salvando...';
+
+      await WifiManager.saveWifiConfig({
+        ssid: newSsid,
+        password: newPassword
+      });
+
+      btnSaveEdit.disabled = false;
+      btnSaveEdit.textContent = 'Salvar Wi-Fi';
+
+      // Volta para a visualização limpa com os novos valores
+      if (editForm) editForm.style.display = 'none';
+      if (displayView) displayView.style.display = 'flex';
+      if (mainActions) mainActions.style.display = 'block';
+
+      showToast('✓ Informações do Wi-Fi atualizadas com sucesso!');
     });
   }
 }
@@ -1128,7 +1412,7 @@ function fallbackCopyText(text) {
  * Toast flutuante de notificação
  */
 let toastTimeout = null;
-function showToast(message) {
+function showToast(message, icon = '✓') {
   let toast = document.getElementById('toastNotice');
   if (!toast) {
     toast = document.createElement('div');
@@ -1137,7 +1421,7 @@ function showToast(message) {
     document.body.appendChild(toast);
   }
 
-  toast.innerHTML = `<span class="toast-icon">✓</span> <span>${message}</span>`;
+  toast.innerHTML = `<span class="toast-icon">${icon}</span> <span>${message}</span>`;
   toast.classList.add('show');
 
   clearTimeout(toastTimeout);
@@ -1478,6 +1762,7 @@ const AdminManager = {
   applyAdminUI(isAuthed) {
     const topBar = document.getElementById('adminTopBar');
     const headerAdminBtn = document.getElementById('btnOpenAdminAuth');
+    const btnOpenWifiEdit = document.getElementById('btnOpenWifiEdit');
 
     if (isAuthed) {
       document.body.classList.add('admin-mode-active');
@@ -1485,12 +1770,14 @@ const AdminManager = {
       if (container) container.classList.add('admin-mode-active');
       if (topBar) topBar.style.display = 'block';
       if (headerAdminBtn) headerAdminBtn.classList.add('active');
+      if (btnOpenWifiEdit) btnOpenWifiEdit.style.display = 'inline-flex';
     } else {
       document.body.classList.remove('admin-mode-active');
       const container = document.getElementById('menuAppContainer');
       if (container) container.classList.remove('admin-mode-active');
       if (topBar) topBar.style.display = 'none';
       if (headerAdminBtn) headerAdminBtn.classList.remove('active');
+      if (btnOpenWifiEdit) btnOpenWifiEdit.style.display = 'none';
     }
   },
 
@@ -2445,3 +2732,4 @@ window.removeItemFromCart = removeItemFromCart;
 window.openCartDrawer = openCartDrawer;
 window.closeCartDrawer = closeCartDrawer;
 window.AdminManager = AdminManager;
+window.WifiManager = WifiManager;

@@ -97,23 +97,44 @@
         </a>
 
         <!-- Opção 3: Wi-Fi da Casa -->
-        <button type="button" class="hub-btn hub-btn-wifi btn-trigger-wifi" id="hubWifiBtn">
+        <button type="button" class="hub-btn hub-btn-wifi btn-trigger-wifi link-card" id="hubWifiBtn">
           <div class="hub-btn-left">
-            <span class="hub-btn-icon" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <span class="hub-btn-icon" aria-hidden="true" id="hubWifiIcon">
+              <svg class="wifi-icon-active" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
                 <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
                 <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
                 <line x1="12" y1="20" x2="12.01" y2="20"></line>
               </svg>
+              <svg class="wifi-icon-locked" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
             </span>
             <div class="hub-btn-text">
-              <span class="hub-btn-title">Wi-Fi da Casa</span>
-              <span class="hub-btn-desc">Nome da rede e senha rápida</span>
+              <span class="hub-btn-title" id="hubWifiTitle">Wi-Fi da Casa</span>
+              <span class="hub-btn-desc" id="hubWifiDesc">Nome da rede e senha rápida</span>
             </div>
           </div>
           <span class="hub-btn-arrow" aria-hidden="true">➔</span>
         </button>
+
+        <!-- Opção 4: Avalie aqui (Google Reviews) -->
+        <a href="https://search.google.com/local/writereview?placeid=ChIJMa0ilv5XtZQR5QLzIyxNroo" target="_blank" rel="noopener noreferrer" class="link-card" id="hubReviewLink">
+          <div class="link-icon-wrapper" style="background: rgba(229, 160, 0, 0.12); color: #E5A000;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          </div>
+          <div class="link-info">
+            <span class="link-title">Avalie aqui</span>
+            <span class="link-desc">Deixe sua avaliação no Google e nos ajude a crescer</span>
+          </div>
+          <svg class="link-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </a>
 
       </nav>
 
@@ -144,24 +165,53 @@
         <h2 class="wifi-modal-title" id="wifiModalTitle">Wi-Fi d'O Sobrado</h2>
         <p class="wifi-modal-desc">Conecte-se gratuitamente à nossa rede exclusiva para clientes.</p>
 
-        <div class="wifi-info-card">
+        <!-- Visualização Padrão das Credenciais -->
+        <div class="wifi-info-card" id="wifiDisplayView">
           <div class="wifi-row">
             <span class="wifi-row-label">Nome da Rede (SSID)</span>
-            <span class="wifi-row-value">O Sobrado - Clientes</span>
+            <span class="wifi-row-value wifi-ssid-value" id="wifiModalSsidVal">O Sobrado - Clientes</span>
           </div>
           <div class="wifi-row">
             <span class="wifi-row-label">Senha de Acesso</span>
-            <span class="wifi-row-value">sobradoburger</span>
+            <span class="wifi-row-value wifi-password-value" id="wifiModalPasswordVal">sobradoburger</span>
           </div>
         </div>
 
-        <button type="button" class="btn-copy-wifi" id="btnCopyWifiPassword">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-          </svg>
-          <span>Copiar Senha</span>
-        </button>
+        <!-- Formulário de Edição ADM (Oculto por Padrão) -->
+        <div class="wifi-edit-form" id="wifiEditForm" style="display: none;">
+          <div class="wifi-edit-field">
+            <label class="wifi-edit-label" for="wifiEditSsidInput">Nome da Rede (SSID)</label>
+            <input type="text" class="wifi-edit-input" id="wifiEditSsidInput" placeholder="Ex: O Sobrado - Clientes" autocomplete="off" />
+          </div>
+          <div class="wifi-edit-field">
+            <label class="wifi-edit-label" for="wifiEditPasswordInput">Senha de Acesso</label>
+            <input type="text" class="wifi-edit-input" id="wifiEditPasswordInput" placeholder="Ex: sobradoburger" autocomplete="off" />
+          </div>
+          <div class="wifi-edit-actions">
+            <button type="button" class="btn-wifi-edit-cancel" id="btnCancelWifiEdit">Cancelar</button>
+            <button type="button" class="btn-wifi-edit-save" id="btnSaveWifiEdit">Salvar Wi-Fi</button>
+          </div>
+        </div>
+
+        <!-- Ações Principais -->
+        <div class="wifi-main-actions" id="wifiMainActions">
+          <button type="button" class="btn-copy-wifi" id="btnCopyWifiPassword">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>Copiar Senha</span>
+          </button>
+
+          <!-- Botão ADM: Alterar Dados do Wi-Fi -->
+          <button type="button" class="btn-admin-edit-wifi" id="btnOpenWifiEdit" style="display: none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            <span>✏️ Alterar Dados do Wi-Fi</span>
+          </button>
+        </div>
 
         <button type="button" class="btn-close-wifi-text" id="btnCloseWifi">
           Fechar Janela
@@ -176,6 +226,7 @@
 
   <!-- Scripts -->
   <script src="assets/js/products.js"></script>
+  <script src="assets/js/supabase.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>

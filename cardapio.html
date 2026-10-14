@@ -312,25 +312,54 @@
         <h2 class="wifi-modal-title" id="wifiModalTitle">Wi-Fi d'O Sobrado</h2>
         <p class="wifi-modal-desc">Conecte-se gratuitamente à nossa rede exclusiva para clientes.</p>
 
-        <div class="wifi-info-card">
+        <!-- Visualização Padrão das Credenciais -->
+        <div class="wifi-info-card" id="wifiDisplayView">
           <div class="wifi-row">
             <span class="wifi-row-label">Nome da Rede (SSID)</span>
-            <span class="wifi-row-value">O Sobrado - Clientes</span>
+            <span class="wifi-row-value wifi-ssid-value" id="wifiModalSsidVal">O Sobrado - Clientes</span>
           </div>
           <div class="wifi-row">
             <span class="wifi-row-label">Senha de Acesso</span>
-            <span class="wifi-row-value">sobradoburger</span>
+            <span class="wifi-row-value wifi-password-value" id="wifiModalPasswordVal">sobradoburger</span>
           </div>
         </div>
 
-        <button type="button" class="btn-copy-wifi" id="btnCopyWifiPassword">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-          </svg>
-          <span>Copiar Senha</span>
-        </button>
+        <!-- Formulário de Edição ADM (Oculto por Padrão) -->
+        <div class="wifi-edit-form" id="wifiEditForm" style="display: none;">
+          <div class="wifi-edit-field">
+            <label class="wifi-edit-label" for="wifiEditSsidInput">Nome da Rede (SSID)</label>
+            <input type="text" class="wifi-edit-input" id="wifiEditSsidInput" placeholder="Ex: O Sobrado - Clientes" autocomplete="off" />
+          </div>
+          <div class="wifi-edit-field">
+            <label class="wifi-edit-label" for="wifiEditPasswordInput">Senha de Acesso</label>
+            <input type="text" class="wifi-edit-input" id="wifiEditPasswordInput" placeholder="Ex: sobradoburger" autocomplete="off" />
+          </div>
+          <div class="wifi-edit-actions">
+            <button type="button" class="btn-wifi-edit-cancel" id="btnCancelWifiEdit">Cancelar</button>
+            <button type="button" class="btn-wifi-edit-save" id="btnSaveWifiEdit">Salvar Wi-Fi</button>
+          </div>
+        </div>
+
+        <!-- Ações Principais -->
+        <div class="wifi-main-actions" id="wifiMainActions">
+          <button type="button" class="btn-copy-wifi" id="btnCopyWifiPassword">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>Copiar Senha</span>
+          </button>
+
+          <!-- Botão ADM: Alterar Dados do Wi-Fi -->
+          <button type="button" class="btn-admin-edit-wifi" id="btnOpenWifiEdit" style="display: none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            <span>✏️ Alterar Dados do Wi-Fi</span>
+          </button>
+        </div>
 
         <button type="button" class="btn-close-wifi-text" id="btnCloseWifi">
           Fechar Janela
