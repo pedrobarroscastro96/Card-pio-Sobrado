@@ -337,96 +337,9 @@ a {
 }
 
 /* Botão 3: Wi-Fi */
-.hub-btn-wifi {
-  transition: opacity 0.3s ease, border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease, transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
 .hub-btn-wifi .hub-btn-icon {
   background-color: #F7F5F0;
   color: var(--text-primary);
-}
-
-/* Estado Bloqueado do Botão de Wi-Fi (Condicionado ao Instagram) */
-.link-card.is-locked,
-.hub-btn.is-locked {
-  opacity: 0.65;
-  cursor: not-allowed;
-  border-color: #E6E2D8;
-  background-color: #FAF8F5;
-  box-shadow: none;
-  transition: opacity 0.3s ease, border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
-}
-
-.link-card.is-locked:hover,
-.hub-btn.is-locked:hover {
-  transform: none;
-  box-shadow: none;
-  border-color: #E6E2D8;
-}
-
-.link-card.is-locked:active,
-.hub-btn.is-locked:active {
-  transform: none;
-}
-
-.link-card.is-locked .hub-btn-icon,
-.hub-btn.is-locked .hub-btn-icon {
-  background-color: #F0ECE4;
-  border-color: #DFDBD3;
-  color: #8C827A;
-  opacity: 0.85;
-}
-
-.link-card.is-locked .hub-btn-desc,
-.hub-btn.is-locked .hub-btn-desc {
-  color: var(--brand-terracotta);
-  font-weight: 500;
-  line-height: 1.35;
-}
-
-.link-card.is-locked .hub-btn-arrow,
-.hub-btn.is-locked .hub-btn-arrow {
-  color: #B8B0A5;
-}
-
-.link-card.is-locked:hover .hub-btn-arrow,
-.hub-btn.is-locked:hover .hub-btn-arrow {
-  transform: none;
-  color: #B8B0A5;
-}
-
-/* Distintivo suave "🔒 Bloqueado" */
-.wifi-locked-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 2px 7px;
-  border-radius: var(--radius-full);
-  background-color: rgba(200, 90, 23, 0.1);
-  color: var(--brand-terracotta);
-  border: 1px solid rgba(200, 90, 23, 0.22);
-  margin-left: 6px;
-  vertical-align: middle;
-  line-height: 1.2;
-}
-
-/* Alternância de ícones Wi-Fi vs Cadeado */
-.wifi-icon-locked {
-  display: none;
-}
-
-.link-card.is-locked .wifi-icon-active,
-.hub-btn.is-locked .wifi-icon-active {
-  display: none;
-}
-
-.link-card.is-locked .wifi-icon-locked,
-.hub-btn.is-locked .wifi-icon-locked {
-  display: block;
 }
 
 /* Botão 4: Avaliação no Google & Estilos Link-Card */

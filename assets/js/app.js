@@ -82,66 +82,6 @@ function initHub(table) {
       tableBadge.style.display = 'none';
     }
   }
-
-  // Inicializa o desbloqueio do Wi-Fi condicionado à visita ao Instagram
-  initInstagramWifiUnlock();
-}
-
-/**
- * ---------------------------------------------------------------------
- * 2.1 DESBLOQUEIO DO WI-FI VIA VISITA AO INSTAGRAM
- * ---------------------------------------------------------------------
- */
-function initInstagramWifiUnlock() {
-  const wifiBtn = document.getElementById('hubWifiBtn');
-  const instagramBtn = document.getElementById('hubInstagramLink');
-
-  if (!wifiBtn) return;
-
-  const wifiDesc = document.getElementById('hubWifiDesc') || wifiBtn.querySelector('.hub-btn-desc');
-  const activeIcon = wifiBtn.querySelector('.wifi-icon-active');
-  const lockedIcon = wifiBtn.querySelector('.wifi-icon-locked');
-
-  const updateState = (unlocked) => {
-    if (unlocked) {
-      wifiBtn.classList.remove('is-locked');
-      if (wifiDesc) {
-        wifiDesc.textContent = 'Nome da rede e senha rápida';
-      }
-      if (activeIcon) activeIcon.style.display = 'block';
-      if (lockedIcon) lockedIcon.style.display = 'none';
-    } else {
-      wifiBtn.classList.add('is-locked');
-      if (wifiDesc) {
-        wifiDesc.textContent = 'Siga-nos no Instagram para receber o acesso';
-      }
-      if (activeIcon) activeIcon.style.display = 'none';
-      if (lockedIcon) lockedIcon.style.display = 'block';
-    }
-  };
-
-  // Verifica se já visitou o Instagram anteriormente
-  const isVisited = localStorage.getItem('sobrado_instagram_visited') === 'true';
-  updateState(isVisited);
-
-  // Ao clicar no botão de Wi-Fi enquanto bloqueado: intercepta, exibe toast e não abre modal
-  wifiBtn.addEventListener('click', (e) => {
-    const currentlyVisited = localStorage.getItem('sobrado_instagram_visited') === 'true';
-    if (!currentlyVisited || wifiBtn.classList.contains('is-locked')) {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      showToast('Siga nosso Instagram acima para liberar o Wi-Fi!', '🔒');
-      return false;
-    }
-  }, true);
-
-  // Ao clicar no botão "Nosso Instagram": grava chave e desbloqueia em tempo real
-  if (instagramBtn) {
-    instagramBtn.addEventListener('click', () => {
-      localStorage.setItem('sobrado_instagram_visited', 'true');
-      updateState(true);
-    });
-  }
 }
 
 /**
@@ -1282,9 +1222,6 @@ function initWifiModal() {
   btnOpenWifiList.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (btn.classList.contains('is-locked')) {
-        return;
-      }
       openWifi();
     });
   });
